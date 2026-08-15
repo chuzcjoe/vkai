@@ -1,0 +1,11 @@
+namespace vkai.fbs;
+
+table Person {
+  name:string;
+  id:int;
+  email:string;
+}
+
+root_type Person;
+file_identifier "VKAI";
+
