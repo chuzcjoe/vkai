@@ -1,8 +1,10 @@
 # VKAI
 
-A minimal C++ demo that builds FlatBuffers from a Git submodule, generates C++
-code from a schema, and runs a serialization round trip. The Protobuf dependency
-and schema remain in the repository but are not currently built or used.
+A minimal C++ inference demo using FlatBuffers. The build converts fake model
+weights from `assets/weights.json` into `build/weights.bin`; the executable maps
+that file with `mmap`, accesses its float32 tensors in place, and runs a small
+linear layer. The Protobuf dependency and schema remain in the repository but
+are not currently built or used.
 
 ## Build and run
 

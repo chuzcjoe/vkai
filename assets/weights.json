@@ -1,0 +1,15 @@
+{
+  "name": "tiny_linear",
+  "weights": [
+    {
+      "name": "linear.weight",
+      "shape": [2, 3],
+      "data": [0.5, -1.0, 2.0, -0.5, 0.25, 1.5]
+    },
+    {
+      "name": "linear.bias",
+      "shape": [2],
+      "data": [0.1, -0.2]
+    }
+  ]
+}

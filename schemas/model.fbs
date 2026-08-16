@@ -1,11 +1,15 @@
 namespace vkai.fbs;
 
-table Person {
+table Tensor {
   name:string;
-  id:int;
-  email:string;
+  shape:[uint];
+  data:[float];
 }
 
-root_type Person;
-file_identifier "VKAI";
+table Model {
+  name:string;
+  weights:[Tensor];
+}
 
+root_type Model;
+file_identifier "VKAI";

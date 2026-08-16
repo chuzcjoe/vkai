@@ -4,3 +4,6 @@
 [submodule "external/protobuf"]
 	path = external/protobuf
 	url = https://github.com/protocolbuffers/protobuf.git
+[submodule "external/CORE"]
+	path = external/CORE
+	url = https://github.com/chuzcjoe/CORE.git

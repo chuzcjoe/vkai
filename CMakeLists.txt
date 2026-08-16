@@ -25,5 +25,17 @@ flatbuffers_generate_headers(
   SCHEMAS schemas/model.fbs
 )
 
+flatbuffers_generate_binary_files(
+  TARGET vkai_weights
+  SCHEMA schemas/model.fbs
+  JSON_FILES assets/weights.json
+  OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}
+)
+
 add_executable(main src/main.cpp)
-target_link_libraries(main PRIVATE vkai_flatbuffers FlatBuffers::FlatBuffers)
+target_compile_definitions(
+  main PRIVATE VKAI_WEIGHT_FILE="${CMAKE_CURRENT_BINARY_DIR}/weights.bin"
+)
+target_link_libraries(
+  main PRIVATE vkai_flatbuffers vkai_weights FlatBuffers::FlatBuffers vulkan
+)
