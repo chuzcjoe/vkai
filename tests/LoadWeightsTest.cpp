@@ -4,7 +4,7 @@
 
 namespace vkai {
 namespace test { 
-
+ 
 TEST(LoadWeightsTest, MNIST) {
     
 }

@@ -9,7 +9,7 @@ ModelWeights WeightLoader::Load(const std::string& filename) {
         }
 
         // Read and verify magic number
-        uint32_t magic;
+        uint32_t magic; 
         file.read(reinterpret_cast<char*>(&magic), sizeof(magic));
         if (magic != 0x4D4E5354) {  // 'MNST'
             throw std::runtime_error("Invalid weights file format");

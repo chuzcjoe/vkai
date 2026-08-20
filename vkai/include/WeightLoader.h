@@ -7,7 +7,7 @@
  
 namespace vkai {
 
-struct ModelWeights {
+struct ModelWeights { 
         std::vector<float> conv1_weights;
         std::vector<float> conv1_bias;
         std::vector<float> conv2_weights;
