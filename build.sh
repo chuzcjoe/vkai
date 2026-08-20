@@ -8,5 +8,5 @@ cd build
 cmake ..
 make
 
-./main
-
+# test
+./tests/vkai_tests

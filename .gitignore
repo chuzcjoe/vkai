@@ -3,3 +3,7 @@ cmake-build-*/
 compile_commands.json
 .cache/
 .DS_Store
+
+*.pth
+*.bin
+python/vkai_py
