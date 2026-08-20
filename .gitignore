@@ -7,3 +7,4 @@ compile_commands.json
 *.pth
 *.bin
 python/vkai_py
+python/data
