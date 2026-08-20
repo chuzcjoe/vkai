@@ -4,7 +4,7 @@
 #include <vector>
 #include <stdexcept>
 #include <cstdint>
-
+ 
 namespace vkai {
 
 struct ModelWeights {

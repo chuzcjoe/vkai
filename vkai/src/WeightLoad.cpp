@@ -4,7 +4,7 @@ namespace vkai {
 
 ModelWeights WeightLoader::Load(const std::string& filename) {
     std::ifstream file(filename, std::ios::binary);
-        if (!file.is_open()) {
+        if (!file.is_open()) { 
             throw std::runtime_error("Failed to open weights file: " + filename);
         }
 

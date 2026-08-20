@@ -3,7 +3,7 @@
 #include "WeightLoader.h"
 
 namespace vkai {
-namespace test {
+namespace test { 
 
 TEST(LoadWeightsTest, MNIST) {
     

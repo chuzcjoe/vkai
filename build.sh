@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+git config core.hooksPath .githooks
+
 mkdir -p build
 cd build 
 
