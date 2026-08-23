@@ -4,6 +4,9 @@ compile_commands.json
 .cache/
 .DS_Store
 
+__pycache__/
+test_data/
+
 *.pth
 *.bin
 python/vkai_py

@@ -1,0 +1,55 @@
+#version 450
+
+layout(binding = 0) uniform UniformBufferObject {
+    int input_size;
+    int output_size;
+    int batch_size;
+}
+ubo;
+
+layout(set = 0, binding = 1, std430) readonly buffer InputBuffer {
+    float input_buffer[];
+};
+
+layout(set = 0, binding = 2, std430) readonly buffer WeightBuffer {
+    float weight_buffer[];
+};
+
+layout(set = 0, binding = 3, std430) readonly buffer BiasBuffer {
+    float bias_buffer[];
+};
+
+layout(set = 0, binding = 4, std430) writeonly buffer OutputBuffer {
+    float output_buffer[];
+};
+
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+// input: [batch_size, input_size]
+// weights: [output_size, input_size]
+// bias: [output_size]
+// output: [batch_size, output_size]
+
+void main()
+{
+    uint global_idx = gl_GlobalInvocationID.x;
+
+    uint batch_idx = global_idx / ubo.output_size;
+    uint out_idx   = global_idx % ubo.output_size;
+
+    if (batch_idx >= ubo.batch_size ||
+        out_idx >= ubo.output_size) {
+        return;
+    }
+
+    float sum = bias_buffer[out_idx];
+
+    for (uint i = 0; i < ubo.input_size; ++i) {
+        uint input_idx  = batch_idx * ubo.input_size + i;
+        uint weight_idx = out_idx * ubo.input_size + i;
+
+        sum += input_buffer[input_idx] * weight_buffer[weight_idx];
+    }
+
+    output_buffer[batch_idx * ubo.output_size + out_idx] = sum;
+}

@@ -9,7 +9,11 @@ MNISTVulkan::MNISTVulkan(core::vulkan::VulkanContext *context,
   CreateBuffers();
 }
 
-MNISTVulkan::CreateBuffers() {
+void MNISTVulkan::LoadWeights(const std::string &weights_file) {
+  weights_ = WeightLoader::Load(weights_file);
+}
+
+void MNISTVulkan::CreateBuffers() {
   input_buffer_ = core::vulkan::VulkanBuffer(
       context_, sizeof(float) * 28 * 28, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -47,23 +51,23 @@ MNISTVulkan::CreateBuffers() {
       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 }
 
-void MNISTVulkan::LoadWeights() {
-  fc1_weights_buffer.MapData([this](void *data) {
+void MNISTVulkan::UploadWeights() {
+  fc1_weights_buffer_.MapData([this](void *data) {
     std::memcpy(data, weights_.fc1_weights.data(),
                 weights_.fc1_weights.size() * sizeof(float));
   });
 
-  fc1_bias_buffer.MapData([this](void *data) {
+  fc1_bias_buffer_.MapData([this](void *data) {
     std::memcpy(data, weights_.fc1_bias.data(),
                 weights_.fc1_bias.size() * sizeof(float));
   });
 
-  fc2_weights_buffer.MapData([this](void *data) {
+  fc2_weights_buffer_.MapData([this](void *data) {
     std::memcpy(data, weights_.fc2_weights.data(),
                 weights_.fc2_weights.size() * sizeof(float));
   });
 
-  fc2_bias_buffer.MapData([this](void *data) {
+  fc2_bias_buffer_.MapData([this](void *data) {
     std::memcpy(data, weights_.fc2_bias.data(),
                 weights_.fc2_bias.size() * sizeof(float));
   });

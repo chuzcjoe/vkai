@@ -7,8 +7,12 @@ git config core.hooksPath .githooks
 mkdir -p build
 cd build 
 
-cmake ..
-make
+project_root="$(cd .. && pwd)"
+cmake_options=(-DCMAKE_BUILD_TYPE=Debug
+               -DPIPELINE_CACHE_DIR="$project_root")
+
+cmake "${cmake_options[@]}" ..
+make -j10
 
 # test
 ./tests/vkai_tests
