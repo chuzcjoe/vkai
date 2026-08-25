@@ -2,12 +2,13 @@
 
 #include <memory>
 #include <string>
-#include <vector>
 
 #include "VulkanBuffer.h"
 #include "VulkanCompute.h"
 
 #include "LinearLayer.h"
+#include "Relu.h"
+#include "Softmax.h"
 #include "WeightLoader.h"
 
 namespace vkai {
@@ -15,17 +16,13 @@ namespace vkai {
 class MNISTVulkan {
 public:
   explicit MNISTVulkan(core::vulkan::VulkanContext *context,
-                       const std::string &weigths_file);
+                       const std::string &weights_file,
+                       core::vulkan::VulkanBuffer &input,
+                       core::vulkan::VulkanBuffer &output);
 
   void Init();
 
-  void UploadInput(const std::vector<float> &input);
-
   void Run(const VkCommandBuffer command_buffer);
-
-  std::vector<float> DownloadFC1Output();
-
-  bool IsValid() const { return valid_; }
 
 private:
   bool LoadWeights(const std::string &weights_file);
@@ -35,8 +32,9 @@ private:
   void UploadWeights();
 
   core::vulkan::VulkanContext *context_;
+  core::vulkan::VulkanBuffer &input_buffer_;
+  core::vulkan::VulkanBuffer &output_buffer_;
 
-  core::vulkan::VulkanBuffer input_buffer_;
   core::vulkan::VulkanBuffer fc1_weights_buffer_;
   core::vulkan::VulkanBuffer fc1_bias_buffer_;
   core::vulkan::VulkanBuffer fc1_output_buffer_;
@@ -44,13 +42,13 @@ private:
   core::vulkan::VulkanBuffer fc2_weights_buffer_;
   core::vulkan::VulkanBuffer fc2_bias_buffer_;
   core::vulkan::VulkanBuffer fc2_output_buffer_;
-  core::vulkan::VulkanBuffer softmax_output_buffer_;
 
   ModelWeights weights_;
 
   std::unique_ptr<LinearLayer> fc1_layer_;
-
-  bool valid_ = false;
+  std::unique_ptr<Relu> relu1_layer_;
+  std::unique_ptr<LinearLayer> fc2_layer_;
+  std::unique_ptr<Softmax> softmax_layer_;
 };
 
 } // namespace vkai
