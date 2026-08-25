@@ -4,7 +4,7 @@ add_vulkan_shader_target(vkai_shaders
     SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}
     OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/shaders)
 
-file(GLOB vkai_SRC "src/*.cpp")
+file(GLOB vkai_SRC CONFIGURE_DEPENDS "src/*.cpp")
 
 add_library(vkai ${vkai_SRC})
 
