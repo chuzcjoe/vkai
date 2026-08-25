@@ -103,11 +103,13 @@ TEST(LinearLayerTest, test) {
                         output_buffer, kInputSize, kOutputSize, kBatchSize);
   fc1_layer.Init();
 
+  // GPU encode and run
   auto command_buffer =
       core::vulkan::VulkanCommandBuffer::BeginOneTimeCommands(&context);
   fc1_layer.Run(command_buffer.buffer());
   command_buffer.EndOneTimeCommands();
 
+  // Read back gpu results
   std::vector<float> actual(reference.size());
   output_buffer.MapData([&actual](void *data) {
     std::memcpy(actual.data(), data, actual.size() * sizeof(float));
