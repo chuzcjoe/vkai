@@ -1,57 +1,85 @@
 #include "WeightLoader.h"
 
-namespace vkai {
+#include <fstream>
+#include <iostream>
 
-ModelWeights WeightLoader::Load(const std::string &filename) {
+namespace vkai {
+namespace {
+
+bool ReadExact(std::ifstream &file, void *data, std::streamsize size) {
+  return static_cast<bool>(file.read(reinterpret_cast<char *>(data), size));
+}
+
+} // namespace
+
+bool WeightLoader::Load(const std::string &filename, ModelWeights &weights) {
+  weights = {};
+
   std::ifstream file(filename, std::ios::binary);
   if (!file.is_open()) {
-    throw std::runtime_error("Failed to open weights file");
+    std::cerr << "Failed to open weights file: " << filename << '\n';
+    return false;
   }
 
   // Read and verify magic number
-  uint32_t magic;
-  file.read(reinterpret_cast<char *>(&magic), sizeof(magic));
+  uint32_t magic = 0;
+  if (!ReadExact(file, &magic, sizeof(magic))) {
+    std::cerr << "Failed to read weights file header: " << filename << '\n';
+    return false;
+  }
   if (magic != 0x4D4E5354) { // 'MNST'
-    throw std::runtime_error("Invalid weights file format");
+    std::cerr << "Invalid weights file format: " << filename << '\n';
+    return false;
   }
 
   // Read version
-  uint32_t version;
-  file.read(reinterpret_cast<char *>(&version), sizeof(version));
+  uint32_t version = 0;
+  if (!ReadExact(file, &version, sizeof(version))) {
+    std::cerr << "Failed to read weights file version: " << filename << '\n';
+    return false;
+  }
   if (version != 1) {
-    throw std::runtime_error("Unsupported weights file version");
+    std::cerr << "Unsupported weights file version " << version << ": "
+              << filename << '\n';
+    return false;
   }
 
-  ModelWeights weights;
+  ModelWeights loaded_weights;
 
   // Helper to read tensor
-  auto readTensor = [&file]() {
-    uint32_t count;
-    file.read(reinterpret_cast<char *>(&count), sizeof(count));
-
-    std::vector<float> data(count);
-    file.read(reinterpret_cast<char *>(data.data()), count * sizeof(float));
-
-    if (!file.good()) {
-      throw std::runtime_error("Error reading tensor data");
+  auto readTensor = [&file, &filename](std::vector<float> &data) {
+    uint32_t count = 0;
+    if (!ReadExact(file, &count, sizeof(count))) {
+      std::cerr << "Failed to read tensor size: " << filename << '\n';
+      return false;
     }
 
-    return data;
+    data.resize(count);
+    const auto byte_size = static_cast<std::streamsize>(count * sizeof(float));
+    if (!ReadExact(file, data.data(), byte_size)) {
+      std::cerr << "Failed to read tensor data: " << filename << '\n';
+      return false;
+    }
+
+    return true;
   };
 
   // Read weights in same order as exported
-  weights.conv1_weights = readTensor();
-  weights.conv1_bias = readTensor();
-  weights.conv2_weights = readTensor();
-  weights.conv2_bias = readTensor();
-  weights.fc1_weights = readTensor();
-  weights.fc1_bias = readTensor();
-  weights.fc2_weights = readTensor();
-  weights.fc2_bias = readTensor();
-  weights.fc3_weights = readTensor();
-  weights.fc3_bias = readTensor();
+  if (!readTensor(loaded_weights.conv1_weights) ||
+      !readTensor(loaded_weights.conv1_bias) ||
+      !readTensor(loaded_weights.conv2_weights) ||
+      !readTensor(loaded_weights.conv2_bias) ||
+      !readTensor(loaded_weights.fc1_weights) ||
+      !readTensor(loaded_weights.fc1_bias) ||
+      !readTensor(loaded_weights.fc2_weights) ||
+      !readTensor(loaded_weights.fc2_bias) ||
+      !readTensor(loaded_weights.fc3_weights) ||
+      !readTensor(loaded_weights.fc3_bias)) {
+    return false;
+  }
 
-  return weights;
+  weights = std::move(loaded_weights);
+  return true;
 }
 
 } // namespace vkai

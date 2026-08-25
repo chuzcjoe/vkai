@@ -18,6 +18,6 @@ target_include_directories(vkai
 )
 
 target_link_libraries(vkai
-    PRIVATE
+    PUBLIC
     vulkan
 )

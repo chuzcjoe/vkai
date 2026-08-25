@@ -1,8 +1,7 @@
 #pragma once
 
 #include <cstdint>
-#include <fstream>
-#include <stdexcept>
+#include <string>
 #include <vector>
 
 namespace vkai {
@@ -22,7 +21,7 @@ struct ModelWeights {
 
 class WeightLoader {
 public:
-  static ModelWeights Load(const std::string &filename);
+  static bool Load(const std::string &filename, ModelWeights &weights);
 };
 
 } // namespace vkai

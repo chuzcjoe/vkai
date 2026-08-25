@@ -1,6 +1,8 @@
 #include "LinearLayer.h"
 
+#include <cstring>
 #include <filesystem>
+#include <iostream>
 
 namespace vkai {
 
@@ -8,14 +10,24 @@ LinearLayer::LinearLayer(core::vulkan::VulkanContext *context,
                          core::vulkan::VulkanBuffer &input,
                          core::vulkan::VulkanBuffer &weights,
                          core::vulkan::VulkanBuffer &bias,
-                         core::vulkan::VulkanBuffer &output)
+                         core::vulkan::VulkanBuffer &output, int input_size,
+                         int output_size, int batch_size)
     : VulkanCompute(context), input_buffer_(input), weights_buffer_(weights),
       bias_buffer_(bias), output_buffer_(output),
       uniform_buffer_(context, sizeof(UniformData),
                       VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-      uniform_data_{.input_size = 100, .output_size = 100, .batch_size = 1} {
+      uniform_data_{.input_size = input_size,
+                    .output_size = output_size,
+                    .batch_size = batch_size} {
+
+  if (input_size <= 0 || output_size <= 0 || batch_size <= 0) {
+    std::cerr << "LinearLayer dimensions must be positive\n";
+    return;
+  }
+
+  valid_ = true;
 
   // Copy uniform data to the uniform buffer
   uniform_buffer_.MapData([this](void *data) {
@@ -24,6 +36,11 @@ LinearLayer::LinearLayer(core::vulkan::VulkanContext *context,
 }
 
 void LinearLayer::Init() {
+  if (!valid_) {
+    std::cerr << "Cannot initialize an invalid LinearLayer\n";
+    return;
+  }
+
   VulkanCompute::Init();
 
   CreateUniformBufferDescriptorSet(0, uniform_buffer_);
@@ -42,12 +59,19 @@ void LinearLayer::Init() {
 }
 
 void LinearLayer::Run(const VkCommandBuffer command_buffer) {
+  if (!valid_ || pipeline == VK_NULL_HANDLE) {
+    std::cerr << "Cannot run an uninitialized LinearLayer\n";
+    return;
+  }
+
   // Record commands to dispatch the compute shader
   vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
   vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
                           pipeline_layout, 0, 1, &descriptor_set_, 0, nullptr);
 
-  const uint32_t group_x = (uniform_data_.output_size + 255) / 256;
+  const uint32_t output_elements =
+      uniform_data_.batch_size * uniform_data_.output_size;
+  const uint32_t group_x = (output_elements + 255) / 256;
   vkCmdDispatch(command_buffer, group_x, 1, 1);
 }
 

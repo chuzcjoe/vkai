@@ -2,10 +2,11 @@ build/
 cmake-build-*/
 compile_commands.json
 .cache/
+*.cache
 .DS_Store
 
 __pycache__/
-test_data/
+python/test_data/
 
 *.pth
 *.bin

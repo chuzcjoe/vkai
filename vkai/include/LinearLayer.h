@@ -12,11 +12,14 @@ public:
               core::vulkan::VulkanBuffer &input,
               core::vulkan::VulkanBuffer &weights,
               core::vulkan::VulkanBuffer &bias,
-              core::vulkan::VulkanBuffer &output);
+              core::vulkan::VulkanBuffer &output, int input_size,
+              int output_size, int batch_size = 1);
 
   void Init() override;
 
   void Run(const VkCommandBuffer command_buffer);
+
+  bool IsValid() const { return valid_; }
 
 protected:
   std::vector<core::vulkan::BindingInfo> GetBindingInfo() const override;
@@ -37,6 +40,8 @@ private:
     int output_size;
     int batch_size;
   } uniform_data_;
+
+  bool valid_ = false;
 };
 
 } // namespace vkai

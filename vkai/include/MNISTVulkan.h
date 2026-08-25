@@ -1,11 +1,13 @@
 #pragma once
 
-#include <iostream>
+#include <memory>
+#include <string>
 #include <vector>
 
 #include "VulkanBuffer.h"
 #include "VulkanCompute.h"
 
+#include "LinearLayer.h"
 #include "WeightLoader.h"
 
 namespace vkai {
@@ -15,8 +17,18 @@ public:
   explicit MNISTVulkan(core::vulkan::VulkanContext *context,
                        const std::string &weigths_file);
 
+  void Init();
+
+  void UploadInput(const std::vector<float> &input);
+
+  void Run(const VkCommandBuffer command_buffer);
+
+  std::vector<float> DownloadFC1Output();
+
+  bool IsValid() const { return valid_; }
+
 private:
-  void LoadWeights(const std::string &weights_file);
+  bool LoadWeights(const std::string &weights_file);
 
   void CreateBuffers();
 
@@ -35,6 +47,10 @@ private:
   core::vulkan::VulkanBuffer softmax_output_buffer_;
 
   ModelWeights weights_;
+
+  std::unique_ptr<LinearLayer> fc1_layer_;
+
+  bool valid_ = false;
 };
 
 } // namespace vkai
