@@ -1,0 +1,42 @@
+#version 450
+
+layout(set = 0, binding = 0) uniform UniformBufferObject {
+    int input_size;
+    int batch_size;
+} ubo;
+
+layout(set = 0, binding = 1, std430) readonly buffer InputBuffer {
+    float input_buffer[];
+};
+
+layout(set = 0, binding = 2, std430) writeonly buffer OutputBuffer {
+    float output_buffer[];
+};
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+void main()
+{
+    uint batch_index = gl_GlobalInvocationID.x;
+    if (batch_index >= uint(ubo.batch_size)) {
+        return;
+    }
+
+    uint offset = batch_index * uint(ubo.input_size);
+
+    // Subtracting the largest value keeps exp() in a numerically stable range.
+    float max_value = input_buffer[offset];
+    for (uint i = 1; i < uint(ubo.input_size); ++i) {
+        max_value = max(max_value, input_buffer[offset + i]);
+    }
+
+    float exponential_sum = 0.0;
+    for (uint i = 0; i < uint(ubo.input_size); ++i) {
+        exponential_sum += exp(input_buffer[offset + i] - max_value);
+    }
+
+    for (uint i = 0; i < uint(ubo.input_size); ++i) {
+        output_buffer[offset + i] =
+            exp(input_buffer[offset + i] - max_value) / exponential_sum;
+    }
+}
