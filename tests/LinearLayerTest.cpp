@@ -40,18 +40,68 @@ bool ReadFloatBinary(const std::filesystem::path &path,
   return true;
 }
 
+std::vector<float> RunLinearLayer(const std::vector<float> &input,
+                                  const std::vector<float> &weights,
+                                  const std::vector<float> &bias,
+                                  int input_size, int output_size,
+                                  int batch_size) {
+  constexpr VkMemoryPropertyFlags kHostVisibleMemory =
+      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+  core::vulkan::VulkanContext context(
+      false, core::vulkan::QueueFamilyType::Compute, VK_NULL_HANDLE);
+  context.Init();
+
+  core::vulkan::VulkanBuffer input_buffer(
+      &context, input.size() * sizeof(float),
+      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
+  core::vulkan::VulkanBuffer weights_buffer(
+      &context, weights.size() * sizeof(float),
+      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
+  core::vulkan::VulkanBuffer bias_buffer(&context, bias.size() * sizeof(float),
+                                         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                         kHostVisibleMemory);
+  core::vulkan::VulkanBuffer output_buffer(
+      &context,
+      static_cast<VkDeviceSize>(output_size * batch_size) * sizeof(float),
+      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
+
+  input_buffer.MapData([&input](void *data) {
+    std::memcpy(data, input.data(), input.size() * sizeof(float));
+  });
+  weights_buffer.MapData([&weights](void *data) {
+    std::memcpy(data, weights.data(), weights.size() * sizeof(float));
+  });
+  bias_buffer.MapData([&bias](void *data) {
+    std::memcpy(data, bias.data(), bias.size() * sizeof(float));
+  });
+
+  vkai::LinearLayer layer(&context, input_buffer, weights_buffer, bias_buffer,
+                          output_buffer, input_size, output_size, batch_size);
+  layer.Init();
+
+  auto command_buffer =
+      core::vulkan::VulkanCommandBuffer::BeginOneTimeCommands(&context);
+  layer.Run(command_buffer.buffer());
+  command_buffer.EndOneTimeCommands();
+
+  std::vector<float> output(output_size * batch_size);
+  output_buffer.MapData([&output](void *data) {
+    std::memcpy(output.data(), data, output.size() * sizeof(float));
+  });
+  return output;
+}
+
 } // namespace
 
 namespace vkai {
 namespace test {
 
-TEST(LinearLayerTest, test) {
+TEST(LinearLayerTest, fc1_test) {
   constexpr int kInputSize = 28 * 28;
   constexpr int kOutputSize = 128;
   constexpr int kBatchSize = 1;
-  constexpr VkMemoryPropertyFlags kHostVisibleMemory =
-      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
   const std::filesystem::path source_dir = VKAI_SOURCE_DIR;
   std::vector<float> input;
@@ -70,56 +120,49 @@ TEST(LinearLayerTest, test) {
   ASSERT_EQ(weights.fc1_bias.size(), static_cast<size_t>(kOutputSize));
   ASSERT_EQ(reference.size(), static_cast<size_t>(kOutputSize * kBatchSize));
 
-  core::vulkan::VulkanContext context(
-      false, core::vulkan::QueueFamilyType::Compute, VK_NULL_HANDLE);
-  context.Init();
-
-  core::vulkan::VulkanBuffer input_buffer(
-      &context, input.size() * sizeof(float),
-      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
-  core::vulkan::VulkanBuffer weights_buffer(
-      &context, weights.fc1_weights.size() * sizeof(float),
-      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
-  core::vulkan::VulkanBuffer bias_buffer(
-      &context, weights.fc1_bias.size() * sizeof(float),
-      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
-  core::vulkan::VulkanBuffer output_buffer(
-      &context, reference.size() * sizeof(float),
-      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
-
-  input_buffer.MapData([&input](void *data) {
-    std::memcpy(data, input.data(), input.size() * sizeof(float));
-  });
-  weights_buffer.MapData([&weights](void *data) {
-    std::memcpy(data, weights.fc1_weights.data(),
-                weights.fc1_weights.size() * sizeof(float));
-  });
-  bias_buffer.MapData([&weights](void *data) {
-    std::memcpy(data, weights.fc1_bias.data(),
-                weights.fc1_bias.size() * sizeof(float));
-  });
-
-  LinearLayer fc1_layer(&context, input_buffer, weights_buffer, bias_buffer,
-                        output_buffer, kInputSize, kOutputSize, kBatchSize);
-  fc1_layer.Init();
-
-  // GPU encode and run
-  auto command_buffer =
-      core::vulkan::VulkanCommandBuffer::BeginOneTimeCommands(&context);
-  fc1_layer.Run(command_buffer.buffer());
-  command_buffer.EndOneTimeCommands();
-
-  // Read back gpu results
-  std::vector<float> actual(reference.size());
-  output_buffer.MapData([&actual](void *data) {
-    std::memcpy(actual.data(), data, actual.size() * sizeof(float));
-  });
+  const auto actual =
+      RunLinearLayer(input, weights.fc1_weights, weights.fc1_bias, kInputSize,
+                     kOutputSize, kBatchSize);
   ASSERT_EQ(actual.size(), reference.size());
 
   for (size_t i = 0; i < reference.size(); ++i) {
     const float tolerance = 1e-4F + 1e-5F * std::abs(reference[i]);
     EXPECT_NEAR(actual[i], reference[i], tolerance)
         << "FC1 output mismatch at element " << i;
+  }
+}
+
+TEST(LinearLayerTest, fc2_test) {
+  constexpr int kInputSize = 128;
+  constexpr int kOutputSize = 10;
+  constexpr int kBatchSize = 1;
+
+  const std::filesystem::path source_dir = VKAI_SOURCE_DIR;
+  std::vector<float> input;
+  std::vector<float> reference;
+  ModelWeights weights;
+  ASSERT_TRUE(
+      ReadFloatBinary(source_dir / "python/test_data/relu1_output.bin", input));
+  ASSERT_TRUE(ReadFloatBinary(source_dir / "python/test_data/fc2_output.bin",
+                              reference));
+  ASSERT_TRUE(WeightLoader::Load(
+      (source_dir / "python/mnist_weights.bin").string(), weights));
+
+  ASSERT_EQ(input.size(), static_cast<size_t>(kInputSize * kBatchSize));
+  ASSERT_EQ(weights.fc2_weights.size(),
+            static_cast<size_t>(kInputSize * kOutputSize));
+  ASSERT_EQ(weights.fc2_bias.size(), static_cast<size_t>(kOutputSize));
+  ASSERT_EQ(reference.size(), static_cast<size_t>(kOutputSize * kBatchSize));
+
+  const auto actual =
+      RunLinearLayer(input, weights.fc2_weights, weights.fc2_bias, kInputSize,
+                     kOutputSize, kBatchSize);
+  ASSERT_EQ(actual.size(), reference.size());
+
+  for (size_t i = 0; i < reference.size(); ++i) {
+    const float tolerance = 1e-4F + 1e-5F * std::abs(reference[i]);
+    EXPECT_NEAR(actual[i], reference[i], tolerance)
+        << "FC2 output mismatch at element " << i;
   }
 }
 
