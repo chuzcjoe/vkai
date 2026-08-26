@@ -36,16 +36,17 @@ MNISTVulkan::MNISTVulkan(core::vulkan::VulkanContext *context,
   CreateBuffers();
   UploadWeights();
 
-  fc1_layer_ = std::make_unique<Linear>(
+  layers_.emplace_back(std::make_unique<Linear>(
       context_, input_buffer_, fc1_weights_buffer_, fc1_bias_buffer_,
-      fc1_output_buffer_, kInputSize, kFC1OutputSize, kBatchSize);
-  relu1_layer_ = std::make_unique<Relu>(context_, fc1_output_buffer_,
-                                        relu1_output_buffer_, kFC1OutputSize);
-  fc2_layer_ = std::make_unique<Linear>(
+      fc1_output_buffer_, kInputSize, kFC1OutputSize, kBatchSize));
+  layers_.emplace_back(std::make_unique<Relu>(
+      context_, fc1_output_buffer_, relu1_output_buffer_, kFC1OutputSize));
+  layers_.emplace_back(std::make_unique<Linear>(
       context_, relu1_output_buffer_, fc2_weights_buffer_, fc2_bias_buffer_,
-      fc2_output_buffer_, kFC1OutputSize, kFC2OutputSize, kBatchSize);
-  softmax_layer_ = std::make_unique<Softmax>(
-      context_, fc2_output_buffer_, output_buffer_, kFC2OutputSize, kBatchSize);
+      fc2_output_buffer_, kFC1OutputSize, kFC2OutputSize, kBatchSize));
+  layers_.emplace_back(std::make_unique<Softmax>(context_, fc2_output_buffer_,
+                                                 output_buffer_, kFC2OutputSize,
+                                                 kBatchSize));
 }
 
 bool MNISTVulkan::LoadWeights(const std::string &weights_file) {
@@ -102,19 +103,24 @@ void MNISTVulkan::UploadWeights() {
 }
 
 void MNISTVulkan::Init() {
-  fc1_layer_->Init();
-  relu1_layer_->Init();
-  fc2_layer_->Init();
-  softmax_layer_->Init();
+  for (auto &layer : layers_) {
+    layer->Init();
+  }
 }
 
-void MNISTVulkan::Run(const VkCommandBuffer command_buffer) {
+void MNISTVulkan::InsertComputeBarrier(const VkCommandBuffer &command_buffer) {
   const VkMemoryBarrier compute_barrier{
       .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
       .srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
       .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
   };
 
+  vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                       VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1,
+                       &compute_barrier, 0, nullptr, 0, nullptr);
+}
+
+void MNISTVulkan::InsertHostReadBarrier(const VkCommandBuffer &command_buffer) {
   const VkBufferMemoryBarrier host_read_barrier{
       .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
       .srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
@@ -126,25 +132,17 @@ void MNISTVulkan::Run(const VkCommandBuffer command_buffer) {
       .size = VK_WHOLE_SIZE,
   };
 
-  fc1_layer_->Execute(command_buffer);
-  vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                       VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1,
-                       &compute_barrier, 0, nullptr, 0, nullptr);
-
-  relu1_layer_->Execute(command_buffer);
-  vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                       VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1,
-                       &compute_barrier, 0, nullptr, 0, nullptr);
-
-  fc2_layer_->Execute(command_buffer);
-  vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                       VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1,
-                       &compute_barrier, 0, nullptr, 0, nullptr);
-
-  softmax_layer_->Execute(command_buffer);
   vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                        VK_PIPELINE_STAGE_HOST_BIT, 0, 0, nullptr, 1,
                        &host_read_barrier, 0, nullptr);
+}
+
+void MNISTVulkan::Run(const VkCommandBuffer &command_buffer) {
+  for (auto &layer : layers_) {
+    layer->Execute(command_buffer);
+    InsertComputeBarrier(command_buffer);
+  }
+  InsertHostReadBarrier(command_buffer);
 }
 
 } // namespace vkai

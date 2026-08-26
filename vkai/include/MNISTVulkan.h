@@ -6,6 +6,7 @@
 #include "VulkanBuffer.h"
 #include "VulkanCompute.h"
 
+#include "Layer.h"
 #include "Linear.h"
 #include "Relu.h"
 #include "Softmax.h"
@@ -22,7 +23,7 @@ public:
 
   void Init();
 
-  void Run(const VkCommandBuffer command_buffer);
+  void Run(const VkCommandBuffer &command_buffer);
 
 private:
   bool LoadWeights(const std::string &weights_file);
@@ -30,6 +31,10 @@ private:
   void CreateBuffers();
 
   void UploadWeights();
+
+  void InsertComputeBarrier(const VkCommandBuffer &command_buffer);
+
+  void InsertHostReadBarrier(const VkCommandBuffer &command_buffer);
 
   core::vulkan::VulkanContext *context_;
   core::vulkan::VulkanBuffer &input_buffer_;
@@ -45,10 +50,12 @@ private:
 
   ModelWeights weights_;
 
-  std::unique_ptr<Linear> fc1_layer_;
-  std::unique_ptr<Relu> relu1_layer_;
-  std::unique_ptr<Linear> fc2_layer_;
-  std::unique_ptr<Softmax> softmax_layer_;
+  std::vector<std::unique_ptr<Layer>> layers_;
+
+  //   std::unique_ptr<Linear> fc1_layer_;
+  //   std::unique_ptr<Relu> relu1_layer_;
+  //   std::unique_ptr<Linear> fc2_layer_;
+  //   std::unique_ptr<Softmax> softmax_layer_;
 };
 
 } // namespace vkai
