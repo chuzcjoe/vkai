@@ -1,11 +1,10 @@
 #pragma once
 
-#include "VulkanBuffer.h"
-#include "VulkanCompute.h"
+#include "Layer.h"
 
 namespace vkai {
 
-class Softmax : public core::vulkan::VulkanCompute {
+class Softmax : public Layer {
 public:
   Softmax(core::vulkan::VulkanContext *context,
           core::vulkan::VulkanBuffer &input, core::vulkan::VulkanBuffer &output,
@@ -13,7 +12,7 @@ public:
 
   void Init() override;
 
-  void Run(VkCommandBuffer command_buffer);
+  void Execute(const VkCommandBuffer &command_buffer) override;
 
 protected:
   std::vector<core::vulkan::BindingInfo> GetBindingInfo() const override;

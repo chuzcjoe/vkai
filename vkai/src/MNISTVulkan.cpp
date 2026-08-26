@@ -126,22 +126,22 @@ void MNISTVulkan::Run(const VkCommandBuffer command_buffer) {
       .size = VK_WHOLE_SIZE,
   };
 
-  fc1_layer_->Run(command_buffer);
+  fc1_layer_->Execute(command_buffer);
   vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1,
                        &compute_barrier, 0, nullptr, 0, nullptr);
 
-  relu1_layer_->Run(command_buffer);
+  relu1_layer_->Execute(command_buffer);
   vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1,
                        &compute_barrier, 0, nullptr, 0, nullptr);
 
-  fc2_layer_->Run(command_buffer);
+  fc2_layer_->Execute(command_buffer);
   vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1,
                        &compute_barrier, 0, nullptr, 0, nullptr);
 
-  softmax_layer_->Run(command_buffer);
+  softmax_layer_->Execute(command_buffer);
   vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                        VK_PIPELINE_STAGE_HOST_BIT, 0, 0, nullptr, 1,
                        &host_read_barrier, 0, nullptr);

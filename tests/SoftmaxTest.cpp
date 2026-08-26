@@ -80,7 +80,7 @@ TEST(SoftmaxTest, MatchesPyTorchReference) {
 
   auto command_buffer =
       core::vulkan::VulkanCommandBuffer::BeginOneTimeCommands(&context);
-  softmax.Run(command_buffer.buffer());
+  softmax.Execute(command_buffer.buffer());
   command_buffer.EndOneTimeCommands();
 
   std::vector<float> actual(reference.size());

@@ -77,7 +77,7 @@ TEST(ReluTest, MatchesPyTorchReference) {
 
   auto command_buffer =
       core::vulkan::VulkanCommandBuffer::BeginOneTimeCommands(&context);
-  relu.Run(command_buffer.buffer());
+  relu.Execute(command_buffer.buffer());
   command_buffer.EndOneTimeCommands();
 
   std::vector<float> actual(reference.size());

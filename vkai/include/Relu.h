@@ -1,18 +1,17 @@
 #pragma once
 
-#include "VulkanBuffer.h"
-#include "VulkanCompute.h"
+#include "Layer.h"
 
 namespace vkai {
 
-class Relu : public core::vulkan::VulkanCompute {
+class Relu : public Layer {
 public:
   Relu(core::vulkan::VulkanContext *context, core::vulkan::VulkanBuffer &input,
        core::vulkan::VulkanBuffer &output, int element_count);
 
   void Init() override;
 
-  void Run(VkCommandBuffer command_buffer);
+  void Execute(const VkCommandBuffer &command_buffer) override;
 
 protected:
   std::vector<core::vulkan::BindingInfo> GetBindingInfo() const override;

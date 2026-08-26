@@ -83,7 +83,7 @@ std::vector<float> RunLinearLayer(const std::vector<float> &input,
 
   auto command_buffer =
       core::vulkan::VulkanCommandBuffer::BeginOneTimeCommands(&context);
-  layer.Run(command_buffer.buffer());
+  layer.Execute(command_buffer.buffer());
   command_buffer.EndOneTimeCommands();
 
   std::vector<float> output(output_size * batch_size);

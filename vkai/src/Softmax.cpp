@@ -9,7 +9,7 @@ Softmax::Softmax(core::vulkan::VulkanContext *context,
                  core::vulkan::VulkanBuffer &input,
                  core::vulkan::VulkanBuffer &output, int input_size,
                  int batch_size)
-    : VulkanCompute(context), input_buffer_(input), output_buffer_(output),
+    : Layer(context), input_buffer_(input), output_buffer_(output),
       uniform_buffer_(context, sizeof(UniformData),
                       VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
@@ -36,7 +36,7 @@ void Softmax::Init() {
   }
 }
 
-void Softmax::Run(VkCommandBuffer command_buffer) {
+void Softmax::Execute(const VkCommandBuffer &command_buffer) {
   vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
   vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
                           pipeline_layout, 0, 1, &descriptor_set_, 0, nullptr);

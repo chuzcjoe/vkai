@@ -1,11 +1,10 @@
 #pragma once
 
-#include "VulkanBuffer.h"
-#include "VulkanCompute.h"
+#include "Layer.h"
 
 namespace vkai {
 
-class LinearLayer : public core::vulkan::VulkanCompute {
+class LinearLayer : public Layer {
 
 public:
   LinearLayer(core::vulkan::VulkanContext *context,
@@ -17,9 +16,7 @@ public:
 
   void Init() override;
 
-  void Run(const VkCommandBuffer command_buffer);
-
-  bool IsValid() const { return valid_; }
+  void Execute(const VkCommandBuffer &command_buffer) override;
 
 protected:
   std::vector<core::vulkan::BindingInfo> GetBindingInfo() const override;
@@ -40,8 +37,6 @@ private:
     int output_size;
     int batch_size;
   } uniform_data_;
-
-  bool valid_ = false;
 };
 
 } // namespace vkai

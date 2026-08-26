@@ -12,7 +12,7 @@ LinearLayer::LinearLayer(core::vulkan::VulkanContext *context,
                          core::vulkan::VulkanBuffer &bias,
                          core::vulkan::VulkanBuffer &output, int input_size,
                          int output_size, int batch_size)
-    : VulkanCompute(context), input_buffer_(input), weights_buffer_(weights),
+    : Layer(context), input_buffer_(input), weights_buffer_(weights),
       bias_buffer_(bias), output_buffer_(output),
       uniform_buffer_(context, sizeof(UniformData),
                       VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
@@ -27,8 +27,6 @@ LinearLayer::LinearLayer(core::vulkan::VulkanContext *context,
     return;
   }
 
-  valid_ = true;
-
   // Copy uniform data to the uniform buffer
   uniform_buffer_.MapData([this](void *data) {
     memcpy(data, &uniform_data_, sizeof(UniformData));
@@ -36,11 +34,6 @@ LinearLayer::LinearLayer(core::vulkan::VulkanContext *context,
 }
 
 void LinearLayer::Init() {
-  if (!valid_) {
-    std::cerr << "Cannot initialize an invalid LinearLayer\n";
-    return;
-  }
-
   VulkanCompute::Init();
 
   CreateUniformBufferDescriptorSet(0, uniform_buffer_);
@@ -58,8 +51,8 @@ void LinearLayer::Init() {
   }
 }
 
-void LinearLayer::Run(const VkCommandBuffer command_buffer) {
-  if (!valid_ || pipeline == VK_NULL_HANDLE) {
+void LinearLayer::Execute(const VkCommandBuffer &command_buffer) {
+  if (pipeline == VK_NULL_HANDLE) {
     std::cerr << "Cannot run an uninitialized LinearLayer\n";
     return;
   }
