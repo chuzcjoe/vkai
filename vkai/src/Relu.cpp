@@ -2,29 +2,33 @@
 
 #include <cstring>
 #include <filesystem>
+#include <iostream>
 
 namespace vkai {
 
-Relu::Relu(core::vulkan::VulkanContext* context, core::vulkan::VulkanBuffer& input,
-           core::vulkan::VulkanBuffer& output, int element_count)
+Relu::Relu(core::vulkan::VulkanContext* context, int element_count)
     : Layer(context),
-      input_buffer_(input),
-      output_buffer_(output),
       uniform_buffer_(context, sizeof(UniformData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
       uniform_data_{.element_count = element_count} {
+  if (element_count <= 0) {
+    std::cerr << "ReLU element count must be positive\n";
+    return;
+  }
   uniform_buffer_.MapData(
       [this](void* data) { std::memcpy(data, &uniform_data_, sizeof(UniformData)); });
+  valid_ = true;
 }
 
 void Relu::Init() {
+  if (!valid_) {
+    std::cerr << "Cannot initialize an invalid ReLU\n";
+    return;
+  }
   VulkanCompute::Init();
 
   CreateUniformBufferDescriptorSet(0, uniform_buffer_);
-  CreateStorageBufferDescriptorSet(1, input_buffer_);
-  CreateStorageBufferDescriptorSet(2, output_buffer_);
-  vkUpdateDescriptorSets(context_->logical_device, static_cast<uint32_t>(writes_.size()),
-                         writes_.data(), 0, nullptr);
+  vkUpdateDescriptorSets(context_->logical_device, 1, &writes_[0], 0, nullptr);
 
   const std::string cache = GetPipelineCache();
   if (!cache.empty() && !std::filesystem::exists(cache)) {
@@ -32,7 +36,21 @@ void Relu::Init() {
   }
 }
 
-void Relu::Execute(const VkCommandBuffer& command_buffer) {
+void Relu::Execute(const VkCommandBuffer& command_buffer,
+                   const core::vulkan::VulkanBuffer& input_buffer,
+                   core::vulkan::VulkanBuffer& output_buffer) {
+  if (!valid_ || pipeline == VK_NULL_HANDLE) {
+    std::cerr << "Cannot run an invalid or uninitialized ReLU\n";
+    return;
+  }
+  const VkDeviceSize required_size =
+      static_cast<VkDeviceSize>(uniform_data_.element_count) * sizeof(float);
+  if (input_buffer.Size() < required_size || output_buffer.Size() < required_size) {
+    std::cerr << "ReLU input or output buffer is too small\n";
+    return;
+  }
+  UpdateStorageBufferDescriptors(1, 2, input_buffer, output_buffer);
+
   vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
   vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0, 1,
                           &descriptor_set_, 0, nullptr);

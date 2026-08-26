@@ -9,6 +9,12 @@ are not currently built or used.
 The MNIST training, generated artifacts, and C++ reference-data workflow live
 in [`python/mnist`](python/mnist/README.md).
 
+The pretrained MNIST-12 CNN per-node reference export workflow lives in
+[`python/mnist12_cnn`](python/mnist12_cnn/README.md).
+
+The pretrained SqueezeNet 1.1 per-layer reference export workflow lives in
+[`python/squeezenet`](python/squeezenet/README.md).
+
 ## Build and run
 
 ```bash

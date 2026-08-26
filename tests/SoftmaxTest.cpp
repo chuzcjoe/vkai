@@ -69,11 +69,11 @@ TEST(SoftmaxTest, MatchesPyTorchReference) {
   input_buffer.MapData(
       [&input](void* data) { std::memcpy(data, input.data(), input.size() * sizeof(float)); });
 
-  Softmax softmax(&context, input_buffer, output_buffer, kInputSize, kBatchSize);
+  Softmax softmax(&context, kInputSize, kBatchSize);
   softmax.Init();
 
   auto command_buffer = core::vulkan::VulkanCommandBuffer::BeginOneTimeCommands(&context);
-  softmax.Execute(command_buffer.buffer());
+  softmax.Execute(command_buffer.buffer(), input_buffer, output_buffer);
   command_buffer.EndOneTimeCommands();
 
   std::vector<float> actual(reference.size());

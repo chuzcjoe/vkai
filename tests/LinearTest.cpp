@@ -51,28 +51,17 @@ std::vector<float> RunLinear(const std::vector<float>& input, const std::vector<
 
   core::vulkan::VulkanBuffer input_buffer(&context, input.size() * sizeof(float),
                                           VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
-  core::vulkan::VulkanBuffer weights_buffer(&context, weights.size() * sizeof(float),
-                                            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
-  core::vulkan::VulkanBuffer bias_buffer(&context, bias.size() * sizeof(float),
-                                         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
   core::vulkan::VulkanBuffer output_buffer(
       &context, static_cast<VkDeviceSize>(output_size * batch_size) * sizeof(float),
       VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
 
   input_buffer.MapData(
       [&input](void* data) { std::memcpy(data, input.data(), input.size() * sizeof(float)); });
-  weights_buffer.MapData([&weights](void* data) {
-    std::memcpy(data, weights.data(), weights.size() * sizeof(float));
-  });
-  bias_buffer.MapData(
-      [&bias](void* data) { std::memcpy(data, bias.data(), bias.size() * sizeof(float)); });
-
-  vkai::Linear layer(&context, input_buffer, weights_buffer, bias_buffer, output_buffer, input_size,
-                     output_size, batch_size);
+  vkai::Linear layer(&context, weights, bias, input_size, output_size, batch_size);
   layer.Init();
 
   auto command_buffer = core::vulkan::VulkanCommandBuffer::BeginOneTimeCommands(&context);
-  layer.Execute(command_buffer.buffer());
+  layer.Execute(command_buffer.buffer(), input_buffer, output_buffer);
   command_buffer.EndOneTimeCommands();
 
   std::vector<float> output(output_size * batch_size);

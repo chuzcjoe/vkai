@@ -1,43 +1,70 @@
 #include "Linear.h"
 
+#include <algorithm>
 #include <cstring>
 #include <filesystem>
 #include <iostream>
 
 namespace vkai {
+namespace {
 
-Linear::Linear(core::vulkan::VulkanContext* context, core::vulkan::VulkanBuffer& input,
-               core::vulkan::VulkanBuffer& weights, core::vulkan::VulkanBuffer& bias,
-               core::vulkan::VulkanBuffer& output, int input_size, int output_size, int batch_size)
+constexpr VkMemoryPropertyFlags kHostVisibleMemory =
+    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+VkDeviceSize BufferSize(const std::vector<float>& values) {
+  return std::max<size_t>(values.size(), 1) * sizeof(float);
+}
+
+}  // namespace
+
+Linear::Linear(core::vulkan::VulkanContext* context, const std::vector<float>& weights,
+               const std::vector<float>& bias, int input_size, int output_size, int batch_size)
     : Layer(context),
-      input_buffer_(input),
-      weights_buffer_(weights),
-      bias_buffer_(bias),
-      output_buffer_(output),
       uniform_buffer_(context, sizeof(UniformData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+                      kHostVisibleMemory),
+      weights_buffer_(context, BufferSize(weights), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                      kHostVisibleMemory),
+      bias_buffer_(context, BufferSize(bias), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                   kHostVisibleMemory),
       uniform_data_{
           .input_size = input_size, .output_size = output_size, .batch_size = batch_size} {
   if (input_size <= 0 || output_size <= 0 || batch_size <= 0) {
     std::cerr << "Linear dimensions must be positive\n";
     return;
   }
+  if (weights.size() != static_cast<size_t>(input_size) * output_size) {
+    std::cerr << "Linear weights size does not match its dimensions\n";
+    return;
+  }
+  if (bias.size() != static_cast<size_t>(output_size)) {
+    std::cerr << "Linear bias size does not match its output size\n";
+    return;
+  }
 
-  // Copy uniform data to the uniform buffer
   uniform_buffer_.MapData(
       [this](void* data) { memcpy(data, &uniform_data_, sizeof(UniformData)); });
+
+  weights_buffer_.MapData([&weights](void* data) {
+    std::memcpy(data, weights.data(), weights.size() * sizeof(float));
+  });
+  bias_buffer_.MapData(
+      [&bias](void* data) { std::memcpy(data, bias.data(), bias.size() * sizeof(float)); });
+  valid_ = true;
 }
 
 void Linear::Init() {
+  if (!valid_) {
+    std::cerr << "Cannot initialize an invalid Linear\n";
+    return;
+  }
   VulkanCompute::Init();
 
   CreateUniformBufferDescriptorSet(0, uniform_buffer_);
-  CreateStorageBufferDescriptorSet(1, input_buffer_);
   CreateStorageBufferDescriptorSet(2, weights_buffer_);
   CreateStorageBufferDescriptorSet(3, bias_buffer_);
-  CreateStorageBufferDescriptorSet(4, output_buffer_);
 
-  vkUpdateDescriptorSets(context_->logical_device, writes_.size(), writes_.data(), 0, nullptr);
+  const VkWriteDescriptorSet fixed_writes[] = {writes_[0], writes_[2], writes_[3]};
+  vkUpdateDescriptorSets(context_->logical_device, 3, fixed_writes, 0, nullptr);
 
   // Save cache if file doesn't exist
   if (!std::filesystem::exists(GetPipelineCache())) {
@@ -45,13 +72,28 @@ void Linear::Init() {
   }
 }
 
-void Linear::Execute(const VkCommandBuffer& command_buffer) {
-  if (pipeline == VK_NULL_HANDLE) {
-    std::cerr << "Cannot run an uninitialized Linear\n";
+void Linear::Execute(const VkCommandBuffer& command_buffer,
+                     const core::vulkan::VulkanBuffer& input_buffer,
+                     core::vulkan::VulkanBuffer& output_buffer) {
+  if (!valid_ || pipeline == VK_NULL_HANDLE) {
+    std::cerr << "Cannot run an invalid or uninitialized Linear\n";
     return;
   }
 
-  // Record commands to dispatch the compute shader
+  const VkDeviceSize required_input_size = static_cast<VkDeviceSize>(uniform_data_.batch_size) *
+                                           uniform_data_.input_size * sizeof(float);
+  const VkDeviceSize required_output_size = static_cast<VkDeviceSize>(uniform_data_.batch_size) *
+                                            uniform_data_.output_size * sizeof(float);
+  if (input_buffer.Size() < required_input_size) {
+    std::cerr << "Linear input buffer is too small\n";
+    return;
+  }
+  if (output_buffer.Size() < required_output_size) {
+    std::cerr << "Linear output buffer is too small\n";
+    return;
+  }
+  UpdateStorageBufferDescriptors(1, 4, input_buffer, output_buffer);
+
   vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
   vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0, 1,
                           &descriptor_set_, 0, nullptr);

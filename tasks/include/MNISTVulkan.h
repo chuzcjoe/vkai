@@ -20,30 +20,19 @@ class MNISTVulkan {
 
   void Init();
 
-  void Run(const VkCommandBuffer& command_buffer);
+  core::vulkan::VulkanBuffer& Run(const VkCommandBuffer& command_buffer);
 
  private:
   bool LoadWeights(const std::string& weights_file);
 
-  void CreateBuffers();
-
-  void UploadWeights();
-
   void InsertComputeBarrier(const VkCommandBuffer& command_buffer);
 
-  void InsertHostReadBarrier(const VkCommandBuffer& command_buffer);
+  void InsertHostReadBarrier(const VkCommandBuffer& command_buffer,
+                             const core::vulkan::VulkanBuffer& buffer);
 
   core::vulkan::VulkanContext* context_;
   core::vulkan::VulkanBuffer& input_buffer_;
   core::vulkan::VulkanBuffer& output_buffer_;
-
-  core::vulkan::VulkanBuffer fc1_weights_buffer_;
-  core::vulkan::VulkanBuffer fc1_bias_buffer_;
-  core::vulkan::VulkanBuffer fc1_output_buffer_;
-  core::vulkan::VulkanBuffer relu1_output_buffer_;
-  core::vulkan::VulkanBuffer fc2_weights_buffer_;
-  core::vulkan::VulkanBuffer fc2_bias_buffer_;
-  core::vulkan::VulkanBuffer fc2_output_buffer_;
 
   ModelWeights weights_;
 

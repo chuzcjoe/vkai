@@ -62,7 +62,7 @@ TEST(MNISTTest, MatchesPyTorchReference) {
 
   core::vulkan::VulkanBuffer input_buffer(&context, input.size() * sizeof(float),
                                           VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
-  core::vulkan::VulkanBuffer output_buffer(&context, reference.size() * sizeof(float),
+  core::vulkan::VulkanBuffer output_buffer(&context, 128U * sizeof(float),
                                            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
   input_buffer.MapData(
       [&input](void* data) { std::memcpy(data, input.data(), input.size() * sizeof(float)); });
@@ -72,11 +72,11 @@ TEST(MNISTTest, MatchesPyTorchReference) {
   mnist.Init();
 
   auto command_buffer = core::vulkan::VulkanCommandBuffer::BeginOneTimeCommands(&context);
-  mnist.Run(command_buffer.buffer());
+  core::vulkan::VulkanBuffer& result_buffer = mnist.Run(command_buffer.buffer());
   command_buffer.EndOneTimeCommands();
 
   std::vector<float> actual(reference.size());
-  output_buffer.MapData(
+  result_buffer.MapData(
       [&actual](void* data) { std::memcpy(actual.data(), data, actual.size() * sizeof(float)); });
   ASSERT_EQ(actual.size(), reference.size());
 

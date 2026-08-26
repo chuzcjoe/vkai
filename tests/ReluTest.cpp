@@ -66,11 +66,11 @@ TEST(ReluTest, MatchesPyTorchReference) {
   input_buffer.MapData(
       [&input](void* data) { std::memcpy(data, input.data(), input.size() * sizeof(float)); });
 
-  Relu relu(&context, input_buffer, output_buffer, static_cast<int>(input.size()));
+  Relu relu(&context, static_cast<int>(input.size()));
   relu.Init();
 
   auto command_buffer = core::vulkan::VulkanCommandBuffer::BeginOneTimeCommands(&context);
-  relu.Execute(command_buffer.buffer());
+  relu.Execute(command_buffer.buffer(), input_buffer, output_buffer);
   command_buffer.EndOneTimeCommands();
 
   std::vector<float> actual(reference.size());
