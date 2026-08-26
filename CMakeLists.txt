@@ -38,4 +38,5 @@ flatbuffers_generate_binary_files(
 add_definitions(-DPIPELINE_CACHE_DIR="")
 
 add_subdirectory(vkai)
+add_subdirectory(tasks)
 add_subdirectory(tests)

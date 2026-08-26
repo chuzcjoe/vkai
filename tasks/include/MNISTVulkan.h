@@ -52,10 +52,6 @@ private:
 
   std::vector<std::unique_ptr<Layer>> layers_;
 
-  //   std::unique_ptr<Linear> fc1_layer_;
-  //   std::unique_ptr<Relu> relu1_layer_;
-  //   std::unique_ptr<Linear> fc2_layer_;
-  //   std::unique_ptr<Softmax> softmax_layer_;
 };
 
 } // namespace vkai
