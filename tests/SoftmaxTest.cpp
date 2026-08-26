@@ -14,8 +14,7 @@
 
 namespace {
 
-bool ReadFloatBinary(const std::filesystem::path &path,
-                     std::vector<float> &values) {
+bool ReadFloatBinary(const std::filesystem::path& path, std::vector<float>& values) {
   std::ifstream file(path, std::ios::binary | std::ios::ate);
   if (!file.is_open()) {
     std::cerr << "Failed to open reference data: " << path << '\n';
@@ -30,7 +29,7 @@ bool ReadFloatBinary(const std::filesystem::path &path,
 
   values.resize(static_cast<size_t>(byte_size) / sizeof(float));
   file.seekg(0, std::ios::beg);
-  if (!file.read(reinterpret_cast<char *>(values.data()), byte_size)) {
+  if (!file.read(reinterpret_cast<char*>(values.data()), byte_size)) {
     std::cerr << "Failed to read reference data: " << path << '\n';
     values.clear();
     return false;
@@ -38,7 +37,7 @@ bool ReadFloatBinary(const std::filesystem::path &path,
   return true;
 }
 
-} // namespace
+}  // namespace
 
 namespace vkai {
 namespace test {
@@ -47,8 +46,7 @@ TEST(SoftmaxTest, MatchesPyTorchReference) {
   constexpr int kInputSize = 10;
   constexpr int kBatchSize = 1;
   constexpr VkMemoryPropertyFlags kHostVisibleMemory =
-      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
   const std::filesystem::path data_dir =
       std::filesystem::path(VKAI_SOURCE_DIR) / "python/mnist/test_data";
@@ -59,41 +57,34 @@ TEST(SoftmaxTest, MatchesPyTorchReference) {
   ASSERT_EQ(input.size(), static_cast<size_t>(kInputSize * kBatchSize));
   ASSERT_EQ(reference.size(), input.size());
 
-  core::vulkan::VulkanContext context(
-      false, core::vulkan::QueueFamilyType::Compute, VK_NULL_HANDLE);
+  core::vulkan::VulkanContext context(false, core::vulkan::QueueFamilyType::Compute,
+                                      VK_NULL_HANDLE);
   context.Init();
 
-  core::vulkan::VulkanBuffer input_buffer(
-      &context, input.size() * sizeof(float),
-      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
-  core::vulkan::VulkanBuffer output_buffer(
-      &context, reference.size() * sizeof(float),
-      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
+  core::vulkan::VulkanBuffer input_buffer(&context, input.size() * sizeof(float),
+                                          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
+  core::vulkan::VulkanBuffer output_buffer(&context, reference.size() * sizeof(float),
+                                           VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
 
-  input_buffer.MapData([&input](void *data) {
-    std::memcpy(data, input.data(), input.size() * sizeof(float));
-  });
+  input_buffer.MapData(
+      [&input](void* data) { std::memcpy(data, input.data(), input.size() * sizeof(float)); });
 
-  Softmax softmax(&context, input_buffer, output_buffer, kInputSize,
-                  kBatchSize);
+  Softmax softmax(&context, input_buffer, output_buffer, kInputSize, kBatchSize);
   softmax.Init();
 
-  auto command_buffer =
-      core::vulkan::VulkanCommandBuffer::BeginOneTimeCommands(&context);
+  auto command_buffer = core::vulkan::VulkanCommandBuffer::BeginOneTimeCommands(&context);
   softmax.Execute(command_buffer.buffer());
   command_buffer.EndOneTimeCommands();
 
   std::vector<float> actual(reference.size());
-  output_buffer.MapData([&actual](void *data) {
-    std::memcpy(actual.data(), data, actual.size() * sizeof(float));
-  });
+  output_buffer.MapData(
+      [&actual](void* data) { std::memcpy(actual.data(), data, actual.size() * sizeof(float)); });
 
   for (size_t i = 0; i < reference.size(); ++i) {
-    EXPECT_NEAR(actual[i], reference[i], 1e-6F)
-        << "Softmax output mismatch at element " << i;
+    EXPECT_NEAR(actual[i], reference[i], 1e-6F) << "Softmax output mismatch at element " << i;
   }
   EXPECT_NEAR(std::accumulate(actual.begin(), actual.end(), 0.0F), 1.0F, 1e-6F);
 }
 
-} // namespace test
-} // namespace vkai
+}  // namespace test
+}  // namespace vkai

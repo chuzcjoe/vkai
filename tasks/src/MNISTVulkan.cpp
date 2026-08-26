@@ -14,12 +14,10 @@ constexpr int kBatchSize = 1;
 constexpr VkMemoryPropertyFlags kHostVisibleMemory =
     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
-} // namespace
+}  // namespace
 
-MNISTVulkan::MNISTVulkan(core::vulkan::VulkanContext *context,
-                         const std::string &weights_file,
-                         core::vulkan::VulkanBuffer &input,
-                         core::vulkan::VulkanBuffer &output)
+MNISTVulkan::MNISTVulkan(core::vulkan::VulkanContext* context, const std::string& weights_file,
+                         core::vulkan::VulkanBuffer& input, core::vulkan::VulkanBuffer& output)
     : context_(context), input_buffer_(input), output_buffer_(output) {
   if (!LoadWeights(weights_file)) {
     return;
@@ -36,79 +34,74 @@ MNISTVulkan::MNISTVulkan(core::vulkan::VulkanContext *context,
   CreateBuffers();
   UploadWeights();
 
-  layers_.emplace_back(std::make_unique<Linear>(
-      context_, input_buffer_, fc1_weights_buffer_, fc1_bias_buffer_,
-      fc1_output_buffer_, kInputSize, kFC1OutputSize, kBatchSize));
-  layers_.emplace_back(std::make_unique<Relu>(
-      context_, fc1_output_buffer_, relu1_output_buffer_, kFC1OutputSize));
-  layers_.emplace_back(std::make_unique<Linear>(
-      context_, relu1_output_buffer_, fc2_weights_buffer_, fc2_bias_buffer_,
-      fc2_output_buffer_, kFC1OutputSize, kFC2OutputSize, kBatchSize));
-  layers_.emplace_back(std::make_unique<Softmax>(context_, fc2_output_buffer_,
-                                                 output_buffer_, kFC2OutputSize,
-                                                 kBatchSize));
+  layers_.emplace_back(std::make_unique<Linear>(context_, input_buffer_, fc1_weights_buffer_,
+                                                fc1_bias_buffer_, fc1_output_buffer_, kInputSize,
+                                                kFC1OutputSize, kBatchSize));
+  layers_.emplace_back(
+      std::make_unique<Relu>(context_, fc1_output_buffer_, relu1_output_buffer_, kFC1OutputSize));
+  layers_.emplace_back(std::make_unique<Linear>(context_, relu1_output_buffer_, fc2_weights_buffer_,
+                                                fc2_bias_buffer_, fc2_output_buffer_,
+                                                kFC1OutputSize, kFC2OutputSize, kBatchSize));
+  layers_.emplace_back(std::make_unique<Softmax>(context_, fc2_output_buffer_, output_buffer_,
+                                                 kFC2OutputSize, kBatchSize));
 }
 
-bool MNISTVulkan::LoadWeights(const std::string &weights_file) {
+bool MNISTVulkan::LoadWeights(const std::string& weights_file) {
   return WeightLoader::Load(weights_file, weights_);
 }
 
 void MNISTVulkan::CreateBuffers() {
-  fc1_weights_buffer_ = core::vulkan::VulkanBuffer(
-      context_, weights_.fc1_weights.size() * sizeof(float),
-      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
+  fc1_weights_buffer_ =
+      core::vulkan::VulkanBuffer(context_, weights_.fc1_weights.size() * sizeof(float),
+                                 VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
 
-  fc1_bias_buffer_ = core::vulkan::VulkanBuffer(
-      context_, weights_.fc1_bias.size() * sizeof(float),
-      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
+  fc1_bias_buffer_ =
+      core::vulkan::VulkanBuffer(context_, weights_.fc1_bias.size() * sizeof(float),
+                                 VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
 
-  fc1_output_buffer_ = core::vulkan::VulkanBuffer(
-      context_, sizeof(float) * kFC1OutputSize,
-      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
+  fc1_output_buffer_ =
+      core::vulkan::VulkanBuffer(context_, sizeof(float) * kFC1OutputSize,
+                                 VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
 
-  relu1_output_buffer_ = core::vulkan::VulkanBuffer(
-      context_, sizeof(float) * kFC1OutputSize,
-      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
+  relu1_output_buffer_ =
+      core::vulkan::VulkanBuffer(context_, sizeof(float) * kFC1OutputSize,
+                                 VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
 
-  fc2_weights_buffer_ = core::vulkan::VulkanBuffer(
-      context_, weights_.fc2_weights.size() * sizeof(float),
-      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
+  fc2_weights_buffer_ =
+      core::vulkan::VulkanBuffer(context_, weights_.fc2_weights.size() * sizeof(float),
+                                 VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
 
-  fc2_bias_buffer_ = core::vulkan::VulkanBuffer(
-      context_, weights_.fc2_bias.size() * sizeof(float),
-      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
+  fc2_bias_buffer_ =
+      core::vulkan::VulkanBuffer(context_, weights_.fc2_bias.size() * sizeof(float),
+                                 VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
 
-  fc2_output_buffer_ = core::vulkan::VulkanBuffer(
-      context_, sizeof(float) * kFC2OutputSize,
-      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
+  fc2_output_buffer_ =
+      core::vulkan::VulkanBuffer(context_, sizeof(float) * kFC2OutputSize,
+                                 VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
 }
 
 void MNISTVulkan::UploadWeights() {
-  fc1_weights_buffer_.MapData([this](void *data) {
-    std::memcpy(data, weights_.fc1_weights.data(),
-                weights_.fc1_weights.size() * sizeof(float));
+  fc1_weights_buffer_.MapData([this](void* data) {
+    std::memcpy(data, weights_.fc1_weights.data(), weights_.fc1_weights.size() * sizeof(float));
   });
-  fc1_bias_buffer_.MapData([this](void *data) {
-    std::memcpy(data, weights_.fc1_bias.data(),
-                weights_.fc1_bias.size() * sizeof(float));
+  fc1_bias_buffer_.MapData([this](void* data) {
+    std::memcpy(data, weights_.fc1_bias.data(), weights_.fc1_bias.size() * sizeof(float));
   });
-  fc2_weights_buffer_.MapData([this](void *data) {
-    std::memcpy(data, weights_.fc2_weights.data(),
-                weights_.fc2_weights.size() * sizeof(float));
+  fc2_weights_buffer_.MapData([this](void* data) {
+    std::memcpy(data, weights_.fc2_weights.data(), weights_.fc2_weights.size() * sizeof(float));
   });
-  fc2_bias_buffer_.MapData([this](void *data) {
-    std::memcpy(data, weights_.fc2_bias.data(),
-                weights_.fc2_bias.size() * sizeof(float));
+  fc2_bias_buffer_.MapData([this](void* data) {
+    std::memcpy(data, weights_.fc2_bias.data(), weights_.fc2_bias.size() * sizeof(float));
   });
 }
 
 void MNISTVulkan::Init() {
-  for (auto &layer : layers_) {
+  for (auto& layer : layers_) {
     layer->Init();
   }
 }
 
-void MNISTVulkan::InsertComputeBarrier(const VkCommandBuffer &command_buffer) {
+void MNISTVulkan::InsertComputeBarrier(const VkCommandBuffer& command_buffer) {
   const VkMemoryBarrier compute_barrier{
       .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
       .srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
@@ -116,11 +109,11 @@ void MNISTVulkan::InsertComputeBarrier(const VkCommandBuffer &command_buffer) {
   };
 
   vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                       VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1,
-                       &compute_barrier, 0, nullptr, 0, nullptr);
+                       VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &compute_barrier, 0, nullptr, 0,
+                       nullptr);
 }
 
-void MNISTVulkan::InsertHostReadBarrier(const VkCommandBuffer &command_buffer) {
+void MNISTVulkan::InsertHostReadBarrier(const VkCommandBuffer& command_buffer) {
   const VkBufferMemoryBarrier host_read_barrier{
       .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
       .srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
@@ -133,16 +126,16 @@ void MNISTVulkan::InsertHostReadBarrier(const VkCommandBuffer &command_buffer) {
   };
 
   vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                       VK_PIPELINE_STAGE_HOST_BIT, 0, 0, nullptr, 1,
-                       &host_read_barrier, 0, nullptr);
+                       VK_PIPELINE_STAGE_HOST_BIT, 0, 0, nullptr, 1, &host_read_barrier, 0,
+                       nullptr);
 }
 
-void MNISTVulkan::Run(const VkCommandBuffer &command_buffer) {
-  for (auto &layer : layers_) {
+void MNISTVulkan::Run(const VkCommandBuffer& command_buffer) {
+  for (auto& layer : layers_) {
     layer->Execute(command_buffer);
     InsertComputeBarrier(command_buffer);
   }
   InsertHostReadBarrier(command_buffer);
 }
 
-} // namespace vkai
+}  // namespace vkai

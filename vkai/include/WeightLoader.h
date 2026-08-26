@@ -20,8 +20,8 @@ struct ModelWeights {
 };
 
 class WeightLoader {
-public:
-  static bool Load(const std::string &filename, ModelWeights &weights);
+ public:
+  static bool Load(const std::string& filename, ModelWeights& weights);
 };
 
-} // namespace vkai
+}  // namespace vkai

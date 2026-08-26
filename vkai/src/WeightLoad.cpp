@@ -1,18 +1,18 @@
-#include "WeightLoader.h"
-
 #include <fstream>
 #include <iostream>
+
+#include "WeightLoader.h"
 
 namespace vkai {
 namespace {
 
-bool ReadExact(std::ifstream &file, void *data, std::streamsize size) {
-  return static_cast<bool>(file.read(reinterpret_cast<char *>(data), size));
+bool ReadExact(std::ifstream& file, void* data, std::streamsize size) {
+  return static_cast<bool>(file.read(reinterpret_cast<char*>(data), size));
 }
 
-} // namespace
+}  // namespace
 
-bool WeightLoader::Load(const std::string &filename, ModelWeights &weights) {
+bool WeightLoader::Load(const std::string& filename, ModelWeights& weights) {
   weights = {};
 
   std::ifstream file(filename, std::ios::binary);
@@ -27,7 +27,7 @@ bool WeightLoader::Load(const std::string &filename, ModelWeights &weights) {
     std::cerr << "Failed to read weights file header: " << filename << '\n';
     return false;
   }
-  if (magic != 0x4D4E5354) { // 'MNST'
+  if (magic != 0x4D4E5354) {  // 'MNST'
     std::cerr << "Invalid weights file format: " << filename << '\n';
     return false;
   }
@@ -39,15 +39,14 @@ bool WeightLoader::Load(const std::string &filename, ModelWeights &weights) {
     return false;
   }
   if (version != 1) {
-    std::cerr << "Unsupported weights file version " << version << ": "
-              << filename << '\n';
+    std::cerr << "Unsupported weights file version " << version << ": " << filename << '\n';
     return false;
   }
 
   ModelWeights loaded_weights;
 
   // Helper to read tensor
-  auto readTensor = [&file, &filename](std::vector<float> &data) {
+  auto readTensor = [&file, &filename](std::vector<float>& data) {
     uint32_t count = 0;
     if (!ReadExact(file, &count, sizeof(count))) {
       std::cerr << "Failed to read tensor size: " << filename << '\n';
@@ -65,16 +64,11 @@ bool WeightLoader::Load(const std::string &filename, ModelWeights &weights) {
   };
 
   // Read weights in same order as exported
-  if (!readTensor(loaded_weights.conv1_weights) ||
-      !readTensor(loaded_weights.conv1_bias) ||
-      !readTensor(loaded_weights.conv2_weights) ||
-      !readTensor(loaded_weights.conv2_bias) ||
-      !readTensor(loaded_weights.fc1_weights) ||
-      !readTensor(loaded_weights.fc1_bias) ||
-      !readTensor(loaded_weights.fc2_weights) ||
-      !readTensor(loaded_weights.fc2_bias) ||
-      !readTensor(loaded_weights.fc3_weights) ||
-      !readTensor(loaded_weights.fc3_bias)) {
+  if (!readTensor(loaded_weights.conv1_weights) || !readTensor(loaded_weights.conv1_bias) ||
+      !readTensor(loaded_weights.conv2_weights) || !readTensor(loaded_weights.conv2_bias) ||
+      !readTensor(loaded_weights.fc1_weights) || !readTensor(loaded_weights.fc1_bias) ||
+      !readTensor(loaded_weights.fc2_weights) || !readTensor(loaded_weights.fc2_bias) ||
+      !readTensor(loaded_weights.fc3_weights) || !readTensor(loaded_weights.fc3_bias)) {
     return false;
   }
 
@@ -82,4 +76,4 @@ bool WeightLoader::Load(const std::string &filename, ModelWeights &weights) {
   return true;
 }
 
-} // namespace vkai
+}  // namespace vkai
