@@ -103,15 +103,15 @@ TEST(LinearTest, fc1_test) {
   constexpr int kBatchSize = 1;
 
   const std::filesystem::path source_dir = VKAI_SOURCE_DIR;
+  const std::filesystem::path mnist_dir = source_dir / "python/mnist";
   std::vector<float> input;
   std::vector<float> reference;
   ModelWeights weights;
+  ASSERT_TRUE(ReadFloatBinary(mnist_dir / "test_data/input.bin", input));
   ASSERT_TRUE(
-      ReadFloatBinary(source_dir / "python/test_data/input.bin", input));
-  ASSERT_TRUE(ReadFloatBinary(source_dir / "python/test_data/fc1_output.bin",
-                              reference));
-  ASSERT_TRUE(WeightLoader::Load(
-      (source_dir / "python/mnist_weights.bin").string(), weights));
+      ReadFloatBinary(mnist_dir / "test_data/fc1_output.bin", reference));
+  ASSERT_TRUE(
+      WeightLoader::Load((mnist_dir / "mnist_weights.bin").string(), weights));
 
   ASSERT_EQ(input.size(), static_cast<size_t>(kInputSize * kBatchSize));
   ASSERT_EQ(weights.fc1_weights.size(),
@@ -136,15 +136,15 @@ TEST(LinearTest, fc2_test) {
   constexpr int kBatchSize = 1;
 
   const std::filesystem::path source_dir = VKAI_SOURCE_DIR;
+  const std::filesystem::path mnist_dir = source_dir / "python/mnist";
   std::vector<float> input;
   std::vector<float> reference;
   ModelWeights weights;
+  ASSERT_TRUE(ReadFloatBinary(mnist_dir / "test_data/relu1_output.bin", input));
   ASSERT_TRUE(
-      ReadFloatBinary(source_dir / "python/test_data/relu1_output.bin", input));
-  ASSERT_TRUE(ReadFloatBinary(source_dir / "python/test_data/fc2_output.bin",
-                              reference));
-  ASSERT_TRUE(WeightLoader::Load(
-      (source_dir / "python/mnist_weights.bin").string(), weights));
+      ReadFloatBinary(mnist_dir / "test_data/fc2_output.bin", reference));
+  ASSERT_TRUE(
+      WeightLoader::Load((mnist_dir / "mnist_weights.bin").string(), weights));
 
   ASSERT_EQ(input.size(), static_cast<size_t>(kInputSize * kBatchSize));
   ASSERT_EQ(weights.fc2_weights.size(),

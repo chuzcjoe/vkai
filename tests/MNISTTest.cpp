@@ -48,7 +48,8 @@ TEST(MNISTTest, MatchesPyTorchReference) {
       VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
   const std::filesystem::path source_dir = VKAI_SOURCE_DIR;
-  const std::filesystem::path data_dir = source_dir / "python/test_data";
+  const std::filesystem::path mnist_dir = source_dir / "python/mnist";
+  const std::filesystem::path data_dir = mnist_dir / "test_data";
 
   std::vector<float> input;
   std::vector<float> reference;
@@ -71,8 +72,7 @@ TEST(MNISTTest, MatchesPyTorchReference) {
     std::memcpy(data, input.data(), input.size() * sizeof(float));
   });
 
-  MNISTVulkan mnist(&context,
-                    (source_dir / "python/mnist_weights.bin").string(),
+  MNISTVulkan mnist(&context, (mnist_dir / "mnist_weights.bin").string(),
                     input_buffer, output_buffer);
   mnist.Init();
 

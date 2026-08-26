@@ -48,7 +48,7 @@ TEST(ReluTest, MatchesPyTorchReference) {
       VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
   const std::filesystem::path data_dir =
-      std::filesystem::path(VKAI_SOURCE_DIR) / "python/test_data";
+      std::filesystem::path(VKAI_SOURCE_DIR) / "python/mnist/test_data";
   std::vector<float> input;
   std::vector<float> reference;
   ASSERT_TRUE(ReadFloatBinary(data_dir / "fc1_output.bin", input));

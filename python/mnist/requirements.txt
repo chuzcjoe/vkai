@@ -1,0 +1,8 @@
+numpy
+pillow
+torch
+torchvision
+
+# Optional, only needed when train_mnist.py exports ONNX.
+onnx
+onnxscript

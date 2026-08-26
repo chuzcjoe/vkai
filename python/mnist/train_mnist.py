@@ -9,12 +9,21 @@ Requirements:
     pip install torch torchvision onnx
 """
 
+import argparse
+from pathlib import Path
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
-import onnx
+
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+DATA_DIR = SCRIPT_DIR / "data"
+MODEL_PATH = SCRIPT_DIR / "mnist_model.pth"
+WEIGHTS_PATH = SCRIPT_DIR / "mnist_weights.bin"
+ONNX_PATH = SCRIPT_DIR / "mnist_model.onnx"
 
 
 class MNISTNet(nn.Module):
@@ -43,7 +52,9 @@ class MNISTNet(nn.Module):
         return x
 
 
-def train_mnist(num_epochs=5, batch_size=64, learning_rate=0.001):
+def train_mnist(
+    num_epochs=5, batch_size=64, learning_rate=0.001, data_dir=DATA_DIR
+):
     """Train the MNIST model."""
 
     # Set device
@@ -57,14 +68,14 @@ def train_mnist(num_epochs=5, batch_size=64, learning_rate=0.001):
     ])
 
     train_dataset = datasets.MNIST(
-        root='./data',
+        root=str(data_dir),
         train=True,
         download=True,
         transform=transform
     )
 
     test_dataset = datasets.MNIST(
-        root='./data',
+        root=str(data_dir),
         train=False,
         download=True,
         transform=transform
@@ -134,13 +145,15 @@ def train_mnist(num_epochs=5, batch_size=64, learning_rate=0.001):
     return model
 
 
-def export_weights_binary(model, filename='mnist_weights.bin'):
+def export_weights_binary(model, filename=WEIGHTS_PATH):
     """Export model weights to a simple binary format for C++ loading."""
     import struct
 
     model.eval()
 
-    with open(filename, 'wb') as f:
+    filename = Path(filename).expanduser().resolve()
+    filename.parent.mkdir(parents=True, exist_ok=True)
+    with filename.open('wb') as f:
         # Write magic number and version
         f.write(struct.pack('I', 0x4D4E5354))  # 'MNST'
         f.write(struct.pack('I', 1))  # Version 1
@@ -172,9 +185,13 @@ def export_weights_binary(model, filename='mnist_weights.bin'):
     print(f"\nWeights exported to {filename}")
 
 
-def export_to_onnx(model, filename='mnist_model.onnx'):
+def export_to_onnx(model, filename=ONNX_PATH):
     """Export the trained model to ONNX format."""
 
+    import onnx
+
+    filename = Path(filename).expanduser().resolve()
+    filename.parent.mkdir(parents=True, exist_ok=True)
     model.eval()
 
     # Create dummy input
@@ -216,7 +233,7 @@ def export_to_onnx(model, filename='mnist_model.onnx'):
     print(f"  Producer: {onnx_model.producer_name}")
 
 
-def test_inference(model):
+def test_inference(model, data_dir=DATA_DIR):
     """Test a single inference to verify the model works."""
 
     model.eval()
@@ -227,7 +244,9 @@ def test_inference(model):
         transforms.Normalize((0.1307,), (0.3081,))
     ])
 
-    test_dataset = datasets.MNIST(root='./data', train=False, transform=transform)
+    test_dataset = datasets.MNIST(
+        root=str(data_dir), train=False, download=False, transform=transform
+    )
     test_image, test_label = test_dataset[0]
 
     # Run inference
@@ -245,41 +264,73 @@ def test_inference(model):
         print(f"  {i}: {prob.item() * 100:.2f}%")
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Train MNIST and export artifacts for the C++ inference tests."
+    )
+    parser.add_argument("--epochs", type=int, default=5)
+    parser.add_argument("--batch-size", type=int, default=64)
+    parser.add_argument("--learning-rate", type=float, default=0.001)
+    parser.add_argument("--data-dir", type=Path, default=DATA_DIR)
+    parser.add_argument("--model", type=Path, default=MODEL_PATH)
+    parser.add_argument("--weights", type=Path, default=WEIGHTS_PATH)
+    parser.add_argument("--onnx", type=Path, default=ONNX_PATH)
+    parser.add_argument(
+        "--skip-onnx", action="store_true", help="Do not create the optional ONNX file."
+    )
+    args = parser.parse_args()
+    if args.epochs < 1:
+        parser.error("--epochs must be at least 1")
+    if args.batch_size < 1:
+        parser.error("--batch-size must be at least 1")
+    return args
+
+
 def main():
+    args = parse_args()
     print("=" * 60)
     print("MNIST Training and Export")
     print("=" * 60)
 
     # Train model
-    model = train_mnist(num_epochs=5)
+    model = train_mnist(
+        num_epochs=args.epochs,
+        batch_size=args.batch_size,
+        learning_rate=args.learning_rate,
+        data_dir=args.data_dir,
+    )
 
     # Save PyTorch model
-    torch.save(model.state_dict(), 'mnist_model.pth')
-    print("\nPyTorch model saved to mnist_model.pth")
+    model_path = args.model.expanduser().resolve()
+    model_path.parent.mkdir(parents=True, exist_ok=True)
+    torch.save(model.state_dict(), model_path)
+    print(f"\nPyTorch model saved to {model_path}")
 
     # Test inference
-    test_inference(model)
+    test_inference(model, args.data_dir)
 
     # Export weights for C++ inference engine
     print("\nExporting weights for C++ inference engine:")
-    export_weights_binary(model)
+    export_weights_binary(model, args.weights)
 
     # Export to ONNX (optional - requires onnxscript)
-    try:
-        export_to_onnx(model)
-    except ImportError as e:
-        print(f"\nNote: ONNX export skipped (missing dependency: {e})")
-        print("This is optional - the C++ weights file was exported successfully.")
-    except Exception as e:
-        print(f"\nWarning: ONNX export failed: {e}")
-        print("This is optional - the C++ weights file was exported successfully.")
+    if not args.skip_onnx:
+        try:
+            export_to_onnx(model, args.onnx)
+        except ImportError as e:
+            print(f"\nNote: ONNX export skipped (missing dependency: {e})")
+            print("This is optional - the C++ weights file was exported successfully.")
+        except Exception as e:
+            print(f"\nWarning: ONNX export failed: {e}")
+            print("This is optional - the C++ weights file was exported successfully.")
 
     print("\n" + "=" * 60)
     print("Training and export complete!")
     print("=" * 60)
     print("\nYou can now use:")
-    print("  - mnist_weights.bin with the Vulkan inference engine (./mnist_gui)")
-    print("  - mnist_model.onnx for visualization at: https://netron.app")
+    print(f"  - {args.weights.expanduser().resolve()} for the C++ unit tests")
+    if not args.skip_onnx:
+        print(f"  - {args.onnx.expanduser().resolve()} for visualization")
 
 
 if __name__ == "__main__":

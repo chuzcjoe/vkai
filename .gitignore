@@ -6,9 +6,9 @@ compile_commands.json
 .DS_Store
 
 __pycache__/
-python/test_data/
+python/mnist/test_data/
 
 *.pth
 *.bin
 python/vkai_py
-python/data
+python/mnist/data/

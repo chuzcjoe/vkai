@@ -6,6 +6,9 @@ that file with `mmap`, accesses its float32 tensors in place, and runs a small
 linear layer. The Protobuf dependency and schema remain in the repository but
 are not currently built or used.
 
+The MNIST training, generated artifacts, and C++ reference-data workflow live
+in [`python/mnist`](python/mnist/README.md).
+
 ## Build and run
 
 ```bash

@@ -2,13 +2,13 @@
 
 Examples:
     # Use item 0 from the MNIST test set.
-    python test_mnist.py --index 0
+    python python/mnist/test_mnist.py --index 0
 
     # Use a custom image (expected to be a light digit on a dark background).
-    python test_mnist.py --image digit.png
+    python python/mnist/test_mnist.py --image digit.png
 
     # Invert a dark-on-light custom image before inference.
-    python test_mnist.py --image digit.png --invert
+    python python/mnist/test_mnist.py --image digit.png --invert
 
 Every ``.bin`` file is a raw, headerless, little-endian float32 array. Tensor
 shapes and inference details are written to ``metadata.json``.
