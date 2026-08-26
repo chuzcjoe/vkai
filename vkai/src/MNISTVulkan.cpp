@@ -36,12 +36,12 @@ MNISTVulkan::MNISTVulkan(core::vulkan::VulkanContext *context,
   CreateBuffers();
   UploadWeights();
 
-  fc1_layer_ = std::make_unique<LinearLayer>(
+  fc1_layer_ = std::make_unique<Linear>(
       context_, input_buffer_, fc1_weights_buffer_, fc1_bias_buffer_,
       fc1_output_buffer_, kInputSize, kFC1OutputSize, kBatchSize);
   relu1_layer_ = std::make_unique<Relu>(context_, fc1_output_buffer_,
                                         relu1_output_buffer_, kFC1OutputSize);
-  fc2_layer_ = std::make_unique<LinearLayer>(
+  fc2_layer_ = std::make_unique<Linear>(
       context_, relu1_output_buffer_, fc2_weights_buffer_, fc2_bias_buffer_,
       fc2_output_buffer_, kFC1OutputSize, kFC2OutputSize, kBatchSize);
   softmax_layer_ = std::make_unique<Softmax>(

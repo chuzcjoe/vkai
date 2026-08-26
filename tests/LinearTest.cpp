@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-#include "LinearLayer.h"
+#include "Linear.h"
 #include "VulkanBuffer.h"
 #include "VulkanCommandBuffer.h"
 #include "VulkanContext.h"
@@ -40,11 +40,10 @@ bool ReadFloatBinary(const std::filesystem::path &path,
   return true;
 }
 
-std::vector<float> RunLinearLayer(const std::vector<float> &input,
-                                  const std::vector<float> &weights,
-                                  const std::vector<float> &bias,
-                                  int input_size, int output_size,
-                                  int batch_size) {
+std::vector<float> RunLinear(const std::vector<float> &input,
+                             const std::vector<float> &weights,
+                             const std::vector<float> &bias, int input_size,
+                             int output_size, int batch_size) {
   constexpr VkMemoryPropertyFlags kHostVisibleMemory =
       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
       VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
@@ -77,8 +76,8 @@ std::vector<float> RunLinearLayer(const std::vector<float> &input,
     std::memcpy(data, bias.data(), bias.size() * sizeof(float));
   });
 
-  vkai::LinearLayer layer(&context, input_buffer, weights_buffer, bias_buffer,
-                          output_buffer, input_size, output_size, batch_size);
+  vkai::Linear layer(&context, input_buffer, weights_buffer, bias_buffer,
+                     output_buffer, input_size, output_size, batch_size);
   layer.Init();
 
   auto command_buffer =
@@ -98,7 +97,7 @@ std::vector<float> RunLinearLayer(const std::vector<float> &input,
 namespace vkai {
 namespace test {
 
-TEST(LinearLayerTest, fc1_test) {
+TEST(LinearTest, fc1_test) {
   constexpr int kInputSize = 28 * 28;
   constexpr int kOutputSize = 128;
   constexpr int kBatchSize = 1;
@@ -120,9 +119,8 @@ TEST(LinearLayerTest, fc1_test) {
   ASSERT_EQ(weights.fc1_bias.size(), static_cast<size_t>(kOutputSize));
   ASSERT_EQ(reference.size(), static_cast<size_t>(kOutputSize * kBatchSize));
 
-  const auto actual =
-      RunLinearLayer(input, weights.fc1_weights, weights.fc1_bias, kInputSize,
-                     kOutputSize, kBatchSize);
+  const auto actual = RunLinear(input, weights.fc1_weights, weights.fc1_bias,
+                                kInputSize, kOutputSize, kBatchSize);
   ASSERT_EQ(actual.size(), reference.size());
 
   for (size_t i = 0; i < reference.size(); ++i) {
@@ -132,7 +130,7 @@ TEST(LinearLayerTest, fc1_test) {
   }
 }
 
-TEST(LinearLayerTest, fc2_test) {
+TEST(LinearTest, fc2_test) {
   constexpr int kInputSize = 128;
   constexpr int kOutputSize = 10;
   constexpr int kBatchSize = 1;
@@ -154,9 +152,8 @@ TEST(LinearLayerTest, fc2_test) {
   ASSERT_EQ(weights.fc2_bias.size(), static_cast<size_t>(kOutputSize));
   ASSERT_EQ(reference.size(), static_cast<size_t>(kOutputSize * kBatchSize));
 
-  const auto actual =
-      RunLinearLayer(input, weights.fc2_weights, weights.fc2_bias, kInputSize,
-                     kOutputSize, kBatchSize);
+  const auto actual = RunLinear(input, weights.fc2_weights, weights.fc2_bias,
+                                kInputSize, kOutputSize, kBatchSize);
   ASSERT_EQ(actual.size(), reference.size());
 
   for (size_t i = 0; i < reference.size(); ++i) {

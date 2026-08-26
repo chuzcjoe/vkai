@@ -6,7 +6,7 @@
 #include "VulkanBuffer.h"
 #include "VulkanCompute.h"
 
-#include "LinearLayer.h"
+#include "Linear.h"
 #include "Relu.h"
 #include "Softmax.h"
 #include "WeightLoader.h"
@@ -45,9 +45,9 @@ private:
 
   ModelWeights weights_;
 
-  std::unique_ptr<LinearLayer> fc1_layer_;
+  std::unique_ptr<Linear> fc1_layer_;
   std::unique_ptr<Relu> relu1_layer_;
-  std::unique_ptr<LinearLayer> fc2_layer_;
+  std::unique_ptr<Linear> fc2_layer_;
   std::unique_ptr<Softmax> softmax_layer_;
 };
 

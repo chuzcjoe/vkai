@@ -4,15 +4,13 @@
 
 namespace vkai {
 
-class LinearLayer : public Layer {
+class Linear : public Layer {
 
 public:
-  LinearLayer(core::vulkan::VulkanContext *context,
-              core::vulkan::VulkanBuffer &input,
-              core::vulkan::VulkanBuffer &weights,
-              core::vulkan::VulkanBuffer &bias,
-              core::vulkan::VulkanBuffer &output, int input_size,
-              int output_size, int batch_size = 1);
+  Linear(core::vulkan::VulkanContext *context,
+         core::vulkan::VulkanBuffer &input, core::vulkan::VulkanBuffer &weights,
+         core::vulkan::VulkanBuffer &bias, core::vulkan::VulkanBuffer &output,
+         int input_size, int output_size, int batch_size = 1);
 
   void Init() override;
 
