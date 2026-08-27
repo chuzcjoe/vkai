@@ -1,31 +1,22 @@
 #include "Linear.h"
 
-#include <algorithm>
 #include <cstring>
 #include <filesystem>
 #include <iostream>
 
+#include "Common.h"
+
 namespace vkai {
-namespace {
-
-constexpr VkMemoryPropertyFlags kHostVisibleMemory =
-    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-
-VkDeviceSize BufferSize(const std::vector<float>& values) {
-  return std::max<size_t>(values.size(), 1) * sizeof(float);
-}
-
-}  // namespace
 
 Linear::Linear(core::vulkan::VulkanContext* context, const std::vector<float>& weights,
                const std::vector<float>& bias, int input_size, int output_size, int batch_size)
     : Layer(context),
       uniform_buffer_(context, sizeof(UniformData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                      kHostVisibleMemory),
+                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
       weights_buffer_(context, BufferSize(weights), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-                      kHostVisibleMemory),
+                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
       bias_buffer_(context, BufferSize(bias), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-                   kHostVisibleMemory),
+                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
       uniform_data_{
           .input_size = input_size, .output_size = output_size, .batch_size = batch_size} {
   if (input_size <= 0 || output_size <= 0 || batch_size <= 0) {

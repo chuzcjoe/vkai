@@ -1,7 +1,9 @@
 # MNIST-12 CNN Python reference workflow
 
-This directory runs the pretrained ONNX Model Zoo MNIST-12 CNN on one image
-and exports Vulkan reference tensors for every ONNX node output.
+This directory contains a pure PyTorch implementation of the ONNX Model Zoo
+MNIST-12 CNN. It runs inference on one image and exports Vulkan reference
+tensors for every original ONNX operation. Before inference, the script prints
+the PyTorch model and every operation's inputs, output shape, and attributes.
 
 The model expects a white handwritten digit on a black background. Input images
 are converted to grayscale, resized to 28x28 with bilinear interpolation,
@@ -11,6 +13,9 @@ normalization is applied.
 ```bash
 # From the repository root, activate the existing environment if needed.
 source python/vkai_py/bin/activate
+
+# Convert the original ONNX initializers to a PyTorch state_dict once.
+python python/mnist12_cnn/convert_mnist12_weights.py
 
 # White digit on a black background.
 python python/mnist12_cnn/test_mnist12_cnn.py --image /path/to/digit.png
@@ -25,28 +30,34 @@ python python/mnist12_cnn/test_mnist12_cnn.py \
     --invert
 ```
 
-The official 26 KB `mnist-12.onnx` model is downloaded automatically from the
-ONNX Model Zoo Hugging Face mirror on first use. Its SHA-256 checksum is
-verified before it is cached under `model/`.
+`convert_mnist12_weights.py` downloads the official 26 KB `mnist-12.onnx`
+model from the ONNX Model Zoo Hugging Face mirror when necessary, verifies its
+SHA-256 checksum, and creates `model/mnist12_cnn.pth`. This conversion step
+requires `onnx`; install `requirements-convert.txt` if it is not available.
+
+`test_mnist12_cnn.py` does not import ONNX or use an ONNX runtime. Its model,
+inference, softmax, and intermediate tensors are implemented with PyTorch.
 
 By default, generated reference files are written to `test_data/`:
 
 - `000_input.bin`: preprocessed NCHW model input.
-- `NNN_<node>_<op>_output.bin`: every ONNX node output in graph order.
+- `conv1_weight.bin`: first Conv2D weights in OIHW layout for the C++ unit test.
+- `NNN_<node>_<op>_output.bin`: every corresponding PyTorch operation output.
 - `model_logits.bin`: final 10-class logits before softmax.
 - `softmax_output.bin`: final probabilities.
 - `metadata.json`: shapes, layouts, ONNX attributes, preprocessing, and top-5
   predictions.
 
-Every `.bin` is a raw, headerless, little-endian IEEE-754 float32 array. The
-model contains 12 nodes: two `Conv -> Add -> Relu -> MaxPool` groups followed
-by two `Reshape` nodes, `MatMul`, and `Add`.
+Every `.bin` is a raw, headerless, little-endian IEEE-754 float32 array. Conv
+and bias Add remain separate so the 12 exported outputs retain the original
+ONNX names and order: two `Conv -> Add -> Relu -> MaxPool` groups followed by
+two `Reshape` operations, `MatMul`, and `Add`.
 
-Use `--output-dir` to write the generated files somewhere else, or `--model`
-to use an existing compatible ONNX model:
+Use `--output-dir` to write the generated files somewhere else, or `--weights`
+to load a different compatible PyTorch state_dict:
 
 ```bash
 python python/mnist12_cnn/test_mnist12_cnn.py \
-    --image /path/to/digit.png \
+    --image python/mnist12_cnn/test_digit_7.png \
     --output-dir /tmp/mnist12-reference
 ```
