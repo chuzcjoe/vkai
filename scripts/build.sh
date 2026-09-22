@@ -2,6 +2,35 @@
 
 set -euo pipefail
 
+usage() {
+  echo "Usage: $0 [-r {unittests|tasks}]" >&2
+}
+
+test_mode="unittests"
+if [[ $# -eq 0 ]]; then
+  :
+elif [[ $# -eq 2 && "$1" == "-r" ]]; then
+  test_mode="$2"
+else
+  usage
+  exit 2
+fi
+
+case "$test_mode" in
+  unittests)
+    test_target="vkai_unittests"
+    test_command=(./tests/vkai_unittests)
+    ;;
+  tasks)
+    test_target="vkai_tasks_tests"
+    test_command=(./tasks/vkai_tasks_tests)
+    ;;
+  *)
+    usage
+    exit 2
+    ;;
+esac
+
 git config core.hooksPath .githooks
 
 mkdir -p build
@@ -25,7 +54,6 @@ cmake_options=(-DCMAKE_BUILD_TYPE=Debug
                -DENABLE_EXAMPLES=0)
 
 cmake "${cmake_options[@]}" ..
-make -j10
+cmake --build . --target "$test_target" -j10
 
-# test
-./tests/vkai_tests
+"${test_command[@]}"

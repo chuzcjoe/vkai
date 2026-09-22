@@ -19,8 +19,13 @@ The pretrained SqueezeNet 1.1 per-layer reference export workflow lives in
 
 ```bash
 git submodule update --init
-./build.sh
+./scripts/build.sh
+# Explicitly select unit tests:
+./scripts/build.sh -r unittests
+# Or run task integration tests:
+./scripts/build.sh -r tasks
 ```
 
-The script configures and builds the project, then runs the FlatBuffers `main`
-executable directly. It exits with a non-zero status if any step fails.
+The script runs unit tests by default. Use `-r unittests` or `-r tasks` to
+explicitly choose a test group. It configures and builds the selected test target,
+then runs it directly. It exits with a non-zero status if any step fails.

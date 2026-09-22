@@ -15,8 +15,8 @@ namespace vkai {
 
 class MNISTVulkan {
  public:
-  explicit MNISTVulkan(core::vulkan::VulkanContext* context, const std::string& weights_file,
-                       core::vulkan::VulkanBuffer& input, core::vulkan::VulkanBuffer& output);
+  MNISTVulkan(core::vulkan::VulkanContext* context, const std::string& weights_file,
+              core::vulkan::VulkanBuffer& input, core::vulkan::VulkanBuffer& output);
 
   void Init();
 
