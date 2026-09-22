@@ -9,10 +9,10 @@
 #include <vector>
 
 #include "Linear.h"
+#include "MNISTWeightsLoader.h"
 #include "VulkanBuffer.h"
 #include "VulkanCommandBuffer.h"
 #include "VulkanContext.h"
-#include "WeightLoader.h"
 
 namespace {
 
@@ -84,10 +84,10 @@ TEST(LinearTest, fc1_test) {
   const std::filesystem::path mnist_dir = source_dir / "python/mnist";
   std::vector<float> input;
   std::vector<float> reference;
-  ModelWeights weights;
+  MNISTWeights weights;
   ASSERT_TRUE(ReadFloatBinary(mnist_dir / "test_data/input.bin", input));
   ASSERT_TRUE(ReadFloatBinary(mnist_dir / "test_data/fc1_output.bin", reference));
-  ASSERT_TRUE(WeightLoader::Load((mnist_dir / "mnist_weights.bin").string(), weights));
+  ASSERT_TRUE(MNISTWeightsLoader::Load((mnist_dir / "mnist_weights.bin").string(), weights));
 
   ASSERT_EQ(input.size(), static_cast<size_t>(kInputSize * kBatchSize));
   ASSERT_EQ(weights.fc1_weights.size(), static_cast<size_t>(kInputSize * kOutputSize));
@@ -113,10 +113,10 @@ TEST(LinearTest, fc2_test) {
   const std::filesystem::path mnist_dir = source_dir / "python/mnist";
   std::vector<float> input;
   std::vector<float> reference;
-  ModelWeights weights;
+  MNISTWeights weights;
   ASSERT_TRUE(ReadFloatBinary(mnist_dir / "test_data/relu1_output.bin", input));
   ASSERT_TRUE(ReadFloatBinary(mnist_dir / "test_data/fc2_output.bin", reference));
-  ASSERT_TRUE(WeightLoader::Load((mnist_dir / "mnist_weights.bin").string(), weights));
+  ASSERT_TRUE(MNISTWeightsLoader::Load((mnist_dir / "mnist_weights.bin").string(), weights));
 
   ASSERT_EQ(input.size(), static_cast<size_t>(kInputSize * kBatchSize));
   ASSERT_EQ(weights.fc2_weights.size(), static_cast<size_t>(kInputSize * kOutputSize));

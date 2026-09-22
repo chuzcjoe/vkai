@@ -1,7 +1,7 @@
 #include <fstream>
 #include <iostream>
 
-#include "WeightLoader.h"
+#include "MNISTWeightsLoader.h"
 
 namespace vkai {
 namespace {
@@ -12,7 +12,7 @@ bool ReadExact(std::ifstream& file, void* data, std::streamsize size) {
 
 }  // namespace
 
-bool WeightLoader::Load(const std::string& filename, ModelWeights& weights) {
+bool MNISTWeightsLoader::Load(const std::string& filename, MNISTWeights& weights) {
   weights = {};
 
   std::ifstream file(filename, std::ios::binary);
@@ -43,7 +43,7 @@ bool WeightLoader::Load(const std::string& filename, ModelWeights& weights) {
     return false;
   }
 
-  ModelWeights loaded_weights;
+  MNISTWeights loaded_weights;
 
   // Helper to read tensor
   auto readTensor = [&file, &filename](std::vector<float>& data) {

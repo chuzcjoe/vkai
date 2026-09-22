@@ -46,7 +46,7 @@ MNISTVulkan::MNISTVulkan(core::vulkan::VulkanContext* context, const std::string
 }
 
 bool MNISTVulkan::LoadWeights(const std::string& weights_file) {
-  return WeightLoader::Load(weights_file, weights_);
+  return MNISTWeightsLoader::Load(weights_file, weights_);
 }
 
 void MNISTVulkan::Init() {

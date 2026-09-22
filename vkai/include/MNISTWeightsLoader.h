@@ -6,7 +6,7 @@
 
 namespace vkai {
 
-struct ModelWeights {
+struct MNISTWeights {
   std::vector<float> conv1_weights;
   std::vector<float> conv1_bias;
   std::vector<float> conv2_weights;
@@ -19,9 +19,9 @@ struct ModelWeights {
   std::vector<float> fc3_bias;
 };
 
-class WeightLoader {
+class MNISTWeightsLoader {
  public:
-  static bool Load(const std::string& filename, ModelWeights& weights);
+  static bool Load(const std::string& filename, MNISTWeights& weights);
 };
 
 }  // namespace vkai
