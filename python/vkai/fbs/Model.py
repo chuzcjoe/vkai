@@ -16,6 +16,9 @@ def ModelAddWeights(builder, weights):
 
 
 def ModelStartWeightsVector(builder, num_elements):
+    # StartVector(element_size, num_elements, alignment).
+    # `weights` stores Tensor table offsets, which are 4-byte uoffset_t values;
+    # the vector elements therefore have size 4 and require 4-byte alignment.
     return builder.StartVector(4, num_elements, 4)
 
 
