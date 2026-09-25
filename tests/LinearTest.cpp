@@ -9,10 +9,10 @@
 #include <vector>
 
 #include "Linear.h"
-#include "MNISTWeightsLoader.h"
 #include "VulkanBuffer.h"
 #include "VulkanCommandBuffer.h"
 #include "VulkanContext.h"
+#include "WeightsLoader.h"
 
 namespace {
 
@@ -84,18 +84,23 @@ TEST(LinearTest, fc1_test) {
   const std::filesystem::path mnist_dir = source_dir / "python/mnist";
   std::vector<float> input;
   std::vector<float> reference;
-  MNISTWeights weights;
+  Weights weights;
   ASSERT_TRUE(ReadFloatBinary(mnist_dir / "test_data/input.bin", input));
   ASSERT_TRUE(ReadFloatBinary(mnist_dir / "test_data/fc1_output.bin", reference));
-  ASSERT_TRUE(MNISTWeightsLoader::Load((mnist_dir / "mnist_weights.bin").string(), weights));
+  ASSERT_TRUE(WeightsLoader::Load((mnist_dir / "mnist_weights.bin").string(), weights));
+
+  const WeightTensor* fc1_weights = weights.Find("fc1.weight");
+  const WeightTensor* fc1_bias = weights.Find("fc1.bias");
+  ASSERT_NE(fc1_weights, nullptr);
+  ASSERT_NE(fc1_bias, nullptr);
 
   ASSERT_EQ(input.size(), static_cast<size_t>(kInputSize * kBatchSize));
-  ASSERT_EQ(weights.fc1_weights.size(), static_cast<size_t>(kInputSize * kOutputSize));
-  ASSERT_EQ(weights.fc1_bias.size(), static_cast<size_t>(kOutputSize));
+  ASSERT_EQ(fc1_weights->data.size(), static_cast<size_t>(kInputSize * kOutputSize));
+  ASSERT_EQ(fc1_bias->data.size(), static_cast<size_t>(kOutputSize));
   ASSERT_EQ(reference.size(), static_cast<size_t>(kOutputSize * kBatchSize));
 
   const auto actual =
-      RunLinear(input, weights.fc1_weights, weights.fc1_bias, kInputSize, kOutputSize, kBatchSize);
+      RunLinear(input, fc1_weights->data, fc1_bias->data, kInputSize, kOutputSize, kBatchSize);
   ASSERT_EQ(actual.size(), reference.size());
 
   for (size_t i = 0; i < reference.size(); ++i) {
@@ -113,18 +118,23 @@ TEST(LinearTest, fc2_test) {
   const std::filesystem::path mnist_dir = source_dir / "python/mnist";
   std::vector<float> input;
   std::vector<float> reference;
-  MNISTWeights weights;
+  Weights weights;
   ASSERT_TRUE(ReadFloatBinary(mnist_dir / "test_data/relu1_output.bin", input));
   ASSERT_TRUE(ReadFloatBinary(mnist_dir / "test_data/fc2_output.bin", reference));
-  ASSERT_TRUE(MNISTWeightsLoader::Load((mnist_dir / "mnist_weights.bin").string(), weights));
+  ASSERT_TRUE(WeightsLoader::Load((mnist_dir / "mnist_weights.bin").string(), weights));
+
+  const WeightTensor* fc2_weights = weights.Find("fc2.weight");
+  const WeightTensor* fc2_bias = weights.Find("fc2.bias");
+  ASSERT_NE(fc2_weights, nullptr);
+  ASSERT_NE(fc2_bias, nullptr);
 
   ASSERT_EQ(input.size(), static_cast<size_t>(kInputSize * kBatchSize));
-  ASSERT_EQ(weights.fc2_weights.size(), static_cast<size_t>(kInputSize * kOutputSize));
-  ASSERT_EQ(weights.fc2_bias.size(), static_cast<size_t>(kOutputSize));
+  ASSERT_EQ(fc2_weights->data.size(), static_cast<size_t>(kInputSize * kOutputSize));
+  ASSERT_EQ(fc2_bias->data.size(), static_cast<size_t>(kOutputSize));
   ASSERT_EQ(reference.size(), static_cast<size_t>(kOutputSize * kBatchSize));
 
   const auto actual =
-      RunLinear(input, weights.fc2_weights, weights.fc2_bias, kInputSize, kOutputSize, kBatchSize);
+      RunLinear(input, fc2_weights->data, fc2_bias->data, kInputSize, kOutputSize, kBatchSize);
   ASSERT_EQ(actual.size(), reference.size());
 
   for (size_t i = 0; i < reference.size(); ++i) {

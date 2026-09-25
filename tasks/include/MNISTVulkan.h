@@ -5,11 +5,11 @@
 
 #include "Layer.h"
 #include "Linear.h"
-#include "MNISTWeightsLoader.h"
 #include "Relu.h"
 #include "Softmax.h"
 #include "VulkanBuffer.h"
 #include "VulkanCompute.h"
+#include "WeightsLoader.h"
 
 namespace vkai {
 
@@ -34,7 +34,7 @@ class MNISTVulkan {
   core::vulkan::VulkanBuffer& input_buffer_;
   core::vulkan::VulkanBuffer& output_buffer_;
 
-  MNISTWeights weights_;
+  Weights weights_;
 
   std::vector<std::unique_ptr<Layer>> layers_;
 };

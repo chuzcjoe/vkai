@@ -10,8 +10,11 @@ Requirements:
 """
 
 import argparse
+import sys
 from pathlib import Path
 
+import flatbuffers
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -20,6 +23,12 @@ from torch.utils.data import DataLoader
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+PYTHON_DIR = SCRIPT_DIR.parent
+if str(PYTHON_DIR) not in sys.path:
+    sys.path.insert(0, str(PYTHON_DIR))
+
+from vkai.fbs import Model, Tensor
+
 DATA_DIR = SCRIPT_DIR / "data"
 MODEL_PATH = SCRIPT_DIR / "mnist_model.pth"
 WEIGHTS_PATH = SCRIPT_DIR / "mnist_weights.bin"
@@ -146,41 +155,38 @@ def train_mnist(
 
 
 def export_weights_binary(model, filename=WEIGHTS_PATH):
-    """Export model weights to a simple binary format for C++ loading."""
-    import struct
+    """Export model state_dict tensors as a FlatBuffers weights artifact."""
 
     model.eval()
 
     filename = Path(filename).expanduser().resolve()
     filename.parent.mkdir(parents=True, exist_ok=True)
-    with filename.open('wb') as f:
-        # Write magic number and version
-        f.write(struct.pack('I', 0x4D4E5354))  # 'MNST'
-        f.write(struct.pack('I', 1))  # Version 1
 
-        # Helper to write tensor
-        def write_tensor(tensor, name):
-            data = tensor.detach().cpu().numpy().flatten().astype('float32')
-            f.write(struct.pack('I', len(data)))  # Number of elements
-            f.write(data.tobytes())
-            print(f"  {name}: {len(data)} floats")
+    builder = flatbuffers.Builder(0)
+    tensor_offsets = []
+    for name, tensor in model.state_dict().items():
+        array = tensor.detach().cpu().contiguous().numpy().astype('<f4', copy=False)
+        shape = builder.CreateNumpyVector(np.asarray(array.shape, dtype='<u4'))
+        data = builder.CreateNumpyVector(array.reshape(-1))
+        tensor_name = builder.CreateString(name)
+        Tensor.TensorStart(builder)
+        Tensor.TensorAddName(builder, tensor_name)
+        Tensor.TensorAddShape(builder, shape)
+        Tensor.TensorAddData(builder, data)
+        tensor_offsets.append(Tensor.TensorEnd(builder))
+        print(f"  {name}: {array.shape}, {array.size} float32 values")
 
-        # Write weights in order expected by C++ code
-        # For FC-only model, we write dummy conv layers for backward compatibility
-        import torch
-        dummy = torch.zeros(1)
-        write_tensor(dummy, "conv1.weight (dummy)")
-        write_tensor(dummy, "conv1.bias (dummy)")
-        write_tensor(dummy, "conv2.weight (dummy)")
-        write_tensor(dummy, "conv2.bias (dummy)")
-
-        write_tensor(model.fc1.weight, "fc1.weight")
-        write_tensor(model.fc1.bias, "fc1.bias")
-        write_tensor(model.fc2.weight, "fc2.weight")
-        write_tensor(model.fc2.bias, "fc2.bias")
-        # Dummy fc3 for compatibility
-        write_tensor(dummy, "fc3.weight (dummy)")
-        write_tensor(dummy, "fc3.bias (dummy)")
+    Model.ModelStartWeightsVector(builder, len(tensor_offsets))
+    for tensor_offset in reversed(tensor_offsets):
+        builder.PrependUOffsetTRelative(tensor_offset)
+    weights = builder.EndVector()
+    model_name = builder.CreateString(model.__class__.__name__)
+    Model.ModelStart(builder)
+    Model.ModelAddName(builder, model_name)
+    Model.ModelAddWeights(builder, weights)
+    model_offset = Model.ModelEnd(builder)
+    builder.Finish(model_offset, file_identifier=b"VKAI")
+    filename.write_bytes(builder.Output())
 
     print(f"\nWeights exported to {filename}")
 

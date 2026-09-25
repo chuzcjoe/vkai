@@ -34,6 +34,8 @@ flatbuffers_generate_binary_files(
   OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}
 )
 
+add_custom_target(vkai_weights_target DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/weights.bin")
+
 # add_definitions(-DPIPELINE_CACHE_DIR="${PIPELINE_CACHE_DIR}")
 add_definitions(-DPIPELINE_CACHE_DIR="")
 

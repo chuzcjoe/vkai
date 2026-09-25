@@ -20,10 +20,16 @@ MNISTVulkan::MNISTVulkan(core::vulkan::VulkanContext* context, const std::string
     return;
   }
 
-  if (weights_.fc1_weights.size() != kInputSize * kFC1OutputSize ||
-      weights_.fc1_bias.size() != kFC1OutputSize ||
-      weights_.fc2_weights.size() != kFC1OutputSize * kFC2OutputSize ||
-      weights_.fc2_bias.size() != kFC2OutputSize) {
+  const WeightTensor* fc1_weights = weights_.Find("fc1.weight");
+  const WeightTensor* fc1_bias = weights_.Find("fc1.bias");
+  const WeightTensor* fc2_weights = weights_.Find("fc2.weight");
+  const WeightTensor* fc2_bias = weights_.Find("fc2.bias");
+  if (fc1_weights == nullptr || fc1_bias == nullptr || fc2_weights == nullptr ||
+      fc2_bias == nullptr ||
+      fc1_weights->data.size() != static_cast<size_t>(kInputSize * kFC1OutputSize) ||
+      fc1_bias->data.size() != static_cast<size_t>(kFC1OutputSize) ||
+      fc2_weights->data.size() != static_cast<size_t>(kFC1OutputSize * kFC2OutputSize) ||
+      fc2_bias->data.size() != static_cast<size_t>(kFC2OutputSize)) {
     std::cerr << "Unexpected MNIST weight dimensions\n";
     return;
   }
@@ -37,16 +43,21 @@ MNISTVulkan::MNISTVulkan(core::vulkan::VulkanContext* context, const std::string
     return;
   }
 
-  layers_.emplace_back(std::make_unique<Linear>(context_, weights_.fc1_weights, weights_.fc1_bias,
+  layers_.emplace_back(std::make_unique<Linear>(context_, fc1_weights->data, fc1_bias->data,
                                                 kInputSize, kFC1OutputSize, kBatchSize));
   layers_.emplace_back(std::make_unique<Relu>(context_, kFC1OutputSize));
-  layers_.emplace_back(std::make_unique<Linear>(context_, weights_.fc2_weights, weights_.fc2_bias,
+  layers_.emplace_back(std::make_unique<Linear>(context_, fc2_weights->data, fc2_bias->data,
                                                 kFC1OutputSize, kFC2OutputSize, kBatchSize));
   layers_.emplace_back(std::make_unique<Softmax>(context_, kFC2OutputSize, kBatchSize));
 }
 
 bool MNISTVulkan::LoadWeights(const std::string& weights_file) {
-  return MNISTWeightsLoader::Load(weights_file, weights_);
+  std::string error_message;
+  if (!WeightsLoader::Load(weights_file, weights_, &error_message)) {
+    std::cerr << error_message << '\n';
+    return false;
+  }
+  return true;
 }
 
 void MNISTVulkan::Init() {

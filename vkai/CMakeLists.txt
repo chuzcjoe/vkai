@@ -15,9 +15,14 @@ target_include_directories(vkai
         "${CMAKE_CURRENT_SOURCE_DIR}/include"
     PRIVATE
         "${CMAKE_CURRENT_BINARY_DIR}/shaders"
+        "${CMAKE_SOURCE_DIR}/external/flatbuffers/include"
 )
 
 target_link_libraries(vkai
     PUBLIC
-    vulkan
+        vulkan
+    PRIVATE
+        vkai_flatbuffers
 )
+
+add_dependencies(vkai GENERATE_vkai_flatbuffers)
