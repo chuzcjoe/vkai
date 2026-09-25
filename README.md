@@ -1,10 +1,17 @@
 # VKAI
 
-A minimal C++ inference demo using FlatBuffers. The build converts fake model
-weights from `assets/weights.json` into `build/weights.bin`; the executable maps
-that file with `mmap`, accesses its float32 tensors in place, and runs a small
-linear layer. The Protobuf dependency and schema remain in the repository but
-are not currently built or used.
+VKAI is a neural-network inference engine built on Vulkan. It aims to make
+inference portable across platforms and GPU vendors by using Vulkan rather than
+vendor-specific software ecosystems such as CUDA or HIP.
+
+Its main building blocks are:
+
+- [CORE](external/CORE), which provides the abstraction over the Vulkan API.
+- [FlatBuffers](external/flatbuffers), which stores model weights in a compact,
+  directly readable binary format.
+
+The project loads FlatBuffer weight artifacts and executes neural-network
+operators through Vulkan, without requiring a vendor-specific GPU runtime.
 
 The MNIST training, generated artifacts, and C++ reference-data workflow live
 in [`python/mnist`](python/mnist/README.md).
