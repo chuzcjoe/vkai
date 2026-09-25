@@ -6,9 +6,10 @@ vendor-specific software ecosystems such as CUDA or HIP.
 
 Its main building blocks are:
 
-- [CORE](external/CORE), which provides the abstraction over the Vulkan API.
-- [FlatBuffers](external/flatbuffers), which stores model weights in a compact,
-  directly readable binary format.
+- [CORE](https://github.com/chuzcjoe/CORE), which provides the abstraction over
+  the Vulkan API.
+- [FlatBuffers](https://github.com/google/flatbuffers), which stores model
+  weights in a compact, directly readable binary format.
 
 The project loads FlatBuffer weight artifacts and executes neural-network
 operators through Vulkan, without requiring a vendor-specific GPU runtime.
