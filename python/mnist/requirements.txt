@@ -3,7 +3,3 @@ pillow
 torch
 torchvision
 flatbuffers==25.12.19
-
-# Optional, only needed when train_mnist.py exports ONNX.
-onnx
-onnxscript

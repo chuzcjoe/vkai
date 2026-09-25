@@ -12,19 +12,18 @@ this directory.
 source python/vkai_py/bin/activate
 
 # Train and create mnist_model.pth and mnist_weights.bin.
-python python/mnist/train_mnist.py --skip-onnx
+python python/mnist/train.py
 
 # Generate test_data/*.bin for the C++ layer and end-to-end tests.
-python python/mnist/test_mnist.py --index 0
+python python/mnist/test.py --index 0
 
 # Build and run the C++ tests.
 cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-`train_mnist.py` downloads MNIST into `data/` when needed. Its optional ONNX
-export can be enabled by omitting `--skip-onnx`. `test_mnist.py` reads the
-trained model and exports raw little-endian float32 tensors plus
+`train.py` downloads MNIST into `data/` when needed. `test.py` reads the trained
+model and exports raw little-endian float32 tensors plus
 `test_data/metadata.json`.
 
 The generated directories and model binaries are intentionally ignored by Git.

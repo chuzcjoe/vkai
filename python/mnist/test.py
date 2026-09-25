@@ -2,13 +2,13 @@
 
 Examples:
     # Use item 0 from the MNIST test set.
-    python python/mnist/test_mnist.py --index 0
+    python python/mnist/test.py --index 0
 
     # Use a custom image (expected to be a light digit on a dark background).
-    python python/mnist/test_mnist.py --image digit.png
+    python python/mnist/test.py --image digit.png
 
     # Invert a dark-on-light custom image before inference.
-    python python/mnist/test_mnist.py --image digit.png --invert
+    python python/mnist/test.py --image digit.png --invert
 
 Every ``.bin`` file is a raw, headerless, little-endian float32 array. Tensor
 shapes and inference details are written to ``metadata.json``.
@@ -34,7 +34,7 @@ MNIST_STD = 0.3081
 
 
 class MNISTNet(nn.Module):
-    """Network architecture used by train_mnist.py."""
+    """Network architecture used by train.py."""
 
     def __init__(self) -> None:
         super().__init__()

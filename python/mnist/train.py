@@ -1,12 +1,12 @@
 """
-Train a simple CNN for MNIST digit classification and export to ONNX.
+Train a simple CNN for MNIST digit classification and export FlatBuffer weights.
 This demonstrates the training workflow described in Chapter 5.
 
 Usage:
-    python train_mnist.py
+    python python/mnist/train.py
 
 Requirements:
-    pip install torch torchvision onnx
+    pip install torch torchvision flatbuffers
 """
 
 import argparse
@@ -32,7 +32,6 @@ from vkai.fbs import Model, Tensor
 DATA_DIR = SCRIPT_DIR / "data"
 MODEL_PATH = SCRIPT_DIR / "mnist_model.pth"
 WEIGHTS_PATH = SCRIPT_DIR / "mnist_weights.bin"
-ONNX_PATH = SCRIPT_DIR / "mnist_model.onnx"
 
 
 class MNISTNet(nn.Module):
@@ -191,54 +190,6 @@ def export_weights_binary(model, filename=WEIGHTS_PATH):
     print(f"\nWeights exported to {filename}")
 
 
-def export_to_onnx(model, filename=ONNX_PATH):
-    """Export the trained model to ONNX format."""
-
-    import onnx
-
-    filename = Path(filename).expanduser().resolve()
-    filename.parent.mkdir(parents=True, exist_ok=True)
-    model.eval()
-
-    # Create dummy input
-    dummy_input = torch.randn(1, 1, 28, 28)
-
-    # Export to ONNX
-    torch.onnx.export(
-        model,
-        dummy_input,
-        filename,
-        export_params=True,
-        opset_version=9,
-        do_constant_folding=True,
-        input_names=['input'],
-        output_names=['output'],
-        dynamic_axes={
-            'input': {0: 'batch_size'},
-            'output': {0: 'batch_size'}
-        }
-    )
-
-    print(f"Model exported to {filename}")
-
-    # Verify the export
-    onnx_model = onnx.load(filename)
-    
-    # Manually downgrade IR version if it's too high for some runtimes
-    if onnx_model.ir_version > 9:
-        print(f"  Downgrading IR version from {onnx_model.ir_version} to 9 for compatibility")
-        onnx_model.ir_version = 9
-        onnx.save(onnx_model, filename)
-
-    onnx.checker.check_model(onnx_model)
-    print("ONNX model verification passed!")
-
-    # Print model info
-    print(f"\nONNX Model Info:")
-    print(f"  Opset version: {onnx_model.opset_import[0].version}")
-    print(f"  Producer: {onnx_model.producer_name}")
-
-
 def test_inference(model, data_dir=DATA_DIR):
     """Test a single inference to verify the model works."""
 
@@ -280,10 +231,6 @@ def parse_args():
     parser.add_argument("--data-dir", type=Path, default=DATA_DIR)
     parser.add_argument("--model", type=Path, default=MODEL_PATH)
     parser.add_argument("--weights", type=Path, default=WEIGHTS_PATH)
-    parser.add_argument("--onnx", type=Path, default=ONNX_PATH)
-    parser.add_argument(
-        "--skip-onnx", action="store_true", help="Do not create the optional ONNX file."
-    )
     args = parser.parse_args()
     if args.epochs < 1:
         parser.error("--epochs must be at least 1")
@@ -319,24 +266,11 @@ def main():
     print("\nExporting weights for C++ inference engine:")
     export_weights_binary(model, args.weights)
 
-    # Export to ONNX (optional - requires onnxscript)
-    if not args.skip_onnx:
-        try:
-            export_to_onnx(model, args.onnx)
-        except ImportError as e:
-            print(f"\nNote: ONNX export skipped (missing dependency: {e})")
-            print("This is optional - the C++ weights file was exported successfully.")
-        except Exception as e:
-            print(f"\nWarning: ONNX export failed: {e}")
-            print("This is optional - the C++ weights file was exported successfully.")
-
     print("\n" + "=" * 60)
     print("Training and export complete!")
     print("=" * 60)
     print("\nYou can now use:")
     print(f"  - {args.weights.expanduser().resolve()} for the C++ unit tests")
-    if not args.skip_onnx:
-        print(f"  - {args.onnx.expanduser().resolve()} for visualization")
 
 
 if __name__ == "__main__":
