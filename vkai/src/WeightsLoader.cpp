@@ -1,10 +1,11 @@
 #include "WeightsLoader.h"
 
-#include <fstream>
 #include <limits>
+#include <string>
 #include <utility>
 #include <vector>
 
+#include "MappedFile.h"
 #include "model_generated.h"
 
 namespace vkai {
@@ -34,33 +35,19 @@ bool WeightsLoader::Load(const std::string& filename, Weights& weights,
     error_message->clear();
   }
 
-  std::ifstream file(filename, std::ios::binary);
-  if (!file.is_open()) {
-    return SetError(weights, error_message, "Failed to open weights file: " + filename);
+  MappedFile mapped_file;
+  std::string mapping_error;
+  if (!mapped_file.Open(filename, mapping_error)) {
+    return SetError(weights, error_message,
+                    "Failed to map weights file: " + filename + " (" + mapping_error + ")");
   }
 
-  file.seekg(0, std::ios::end);
-  const std::streamoff file_size = file.tellg();
-  if (file_size <= 0) {
-    return SetError(weights, error_message, "Weights file is empty: " + filename);
-  }
-  if (static_cast<uintmax_t>(file_size) > std::numeric_limits<size_t>::max()) {
-    return SetError(weights, error_message, "Weights file is too large: " + filename);
-  }
-  file.seekg(0, std::ios::beg);
-
-  const size_t buffer_size = static_cast<size_t>(file_size);
-  std::vector<uint8_t> buffer(buffer_size);
-  if (!file.read(reinterpret_cast<char*>(buffer.data()), file_size)) {
-    return SetError(weights, error_message, "Failed to read weights file: " + filename);
-  }
-
-  flatbuffers::Verifier verifier(buffer.data(), buffer.size());
+  flatbuffers::Verifier verifier(mapped_file.data(), mapped_file.size());
   if (!fbs::VerifyModelBuffer(verifier)) {
     return SetError(weights, error_message, "Invalid FlatBuffers weights file: " + filename);
   }
 
-  const fbs::Model* model = fbs::GetModel(buffer.data());
+  const fbs::Model* model = fbs::GetModel(mapped_file.data());
   if (model->name() == nullptr || model->name()->str().empty()) {
     return SetError(weights, error_message, "Weights model name is empty: " + filename);
   }
