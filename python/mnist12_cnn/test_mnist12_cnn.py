@@ -15,11 +15,13 @@ import argparse
 import hashlib
 import json
 import re
+import sys
 from collections import OrderedDict
 from pathlib import Path
 from typing import Any
 
 import numpy as np
+import flatbuffers
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -27,7 +29,14 @@ from PIL import Image, ImageOps
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+PYTHON_DIR = SCRIPT_DIR.parent
+if str(PYTHON_DIR) not in sys.path:
+    sys.path.insert(0, str(PYTHON_DIR))
+
+from vkai.fbs import Model, Tensor
+
 DEFAULT_WEIGHTS_PATH = SCRIPT_DIR / "model" / "mnist12_cnn.pth"
+DEFAULT_VKAI_WEIGHTS_PATH = SCRIPT_DIR / "model" / "mnist12_weights.bin"
 SOURCE_MODEL_URL = (
     "https://huggingface.co/onnxmodelzoo/mnist-12/resolve/main/mnist-12.onnx"
 )
@@ -226,6 +235,12 @@ def parse_args() -> argparse.Namespace:
         default=SCRIPT_DIR / "test_data",
         help="Directory for exported .bin files and metadata.json.",
     )
+    parser.add_argument(
+        "--vkai-weights-output",
+        type=Path,
+        default=DEFAULT_VKAI_WEIGHTS_PATH,
+        help="FlatBuffers weights artifact for the C++ Vulkan MNIST-12 task.",
+    )
     return parser.parse_args()
 
 
@@ -235,6 +250,38 @@ def file_sha256(path: Path) -> str:
         for chunk in iter(lambda: weights_file.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def export_vkai_weights(model: MNIST12CNN, output_path: Path) -> Path:
+    """Export the model state_dict in the FlatBuffers format read by WeightsLoader."""
+    builder = flatbuffers.Builder(1024)
+    tensor_offsets = []
+    for name, tensor in model.state_dict().items():
+        array = tensor.detach().cpu().contiguous().numpy().astype("<f4", copy=False)
+        tensor_name = builder.CreateString(name)
+        shape = builder.CreateNumpyVector(np.asarray(array.shape, dtype="<u4"))
+        data = builder.CreateNumpyVector(array.reshape(-1))
+        Tensor.TensorStart(builder)
+        Tensor.TensorAddName(builder, tensor_name)
+        Tensor.TensorAddShape(builder, shape)
+        Tensor.TensorAddData(builder, data)
+        tensor_offsets.append(Tensor.TensorEnd(builder))
+
+    model_name = builder.CreateString(model.__class__.__name__)
+    Model.ModelStartWeightsVector(builder, len(tensor_offsets))
+    for tensor_offset in reversed(tensor_offsets):
+        builder.PrependUOffsetTRelative(tensor_offset)
+    weights = builder.EndVector()
+    Model.ModelStart(builder)
+    Model.ModelAddName(builder, model_name)
+    Model.ModelAddWeights(builder, weights)
+    model_offset = Model.ModelEnd(builder)
+    builder.Finish(model_offset, file_identifier=b"VKAI")
+
+    resolved_path = output_path.expanduser().resolve()
+    resolved_path.parent.mkdir(parents=True, exist_ok=True)
+    resolved_path.write_bytes(builder.Output())
+    return resolved_path
 
 
 def load_model(weights_path: Path) -> tuple[MNIST12CNN, Path, str]:
@@ -474,6 +521,7 @@ def main() -> None:
     torch.manual_seed(0)
 
     model, weights_path, weights_checksum = load_model(args.weights)
+    vkai_weights_path = export_vkai_weights(model, args.vkai_weights_output)
     input_tensor, preprocessing_metadata = load_input(args.image, args.invert)
     print_model_structure(model, input_tensor)
     logits, probabilities, layers = run_inference(model, input_tensor)
@@ -495,6 +543,7 @@ def main() -> None:
     print(f"Predicted class: {predicted_class}")
     print(f"Confidence: {confidence:.6f}")
     print(f"Captured PyTorch operation outputs: {len(layers)}")
+    print(f"VKAI FlatBuffers weights: {vkai_weights_path}")
     print(f"Reference data: {metadata_path.parent}")
     print(f"Metadata: {metadata_path}")
 

@@ -37,6 +37,8 @@ requires `onnx`; install `requirements-convert.txt` if it is not available.
 
 `test_mnist12_cnn.py` does not import ONNX or use an ONNX runtime. Its model,
 inference, softmax, and intermediate tensors are implemented with PyTorch.
+It also exports `model/mnist12_weights.bin` in VKAI FlatBuffers format for the
+C++ Vulkan MNIST-12 task. Override that destination with `--vkai-weights-output`.
 
 By default, generated reference files are written to `test_data/`:
 
