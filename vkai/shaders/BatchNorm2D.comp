@@ -1,0 +1,19 @@
+#version 450
+
+layout(binding = 0) uniform UniformBufferObject {
+    int channels;
+    int elements_per_channel;
+    int element_count;
+    int reserved;
+} ubo;
+layout(binding = 1, std430) readonly buffer InputBuffer { float input_buffer[]; };
+layout(binding = 2, std430) writeonly buffer OutputBuffer { float output_buffer[]; };
+layout(binding = 3, std430) readonly buffer Parameters { vec2 parameters[]; };
+layout(local_size_x = 256) in;
+
+void main() {
+    uint index = gl_GlobalInvocationID.x;
+    if (index >= uint(ubo.element_count)) return;
+    uint channel = (index / uint(ubo.elements_per_channel)) % uint(ubo.channels);
+    output_buffer[index] = input_buffer[index] * parameters[channel].x + parameters[channel].y;
+}
