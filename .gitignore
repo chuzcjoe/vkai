@@ -11,6 +11,7 @@ python/mnist12_cnn/model/
 python/mnist12_cnn/test_data/
 python/pspnet/models/
 python/pspnet/output/
+python/pspnet/test_data/
 python/squeezenet/test_data/
 
 *.pth

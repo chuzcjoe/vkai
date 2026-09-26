@@ -11,12 +11,16 @@ namespace vkai {
 Conv2D::Conv2D(core::vulkan::VulkanContext* context, const std::vector<float>& weights,
                int input_channels, int output_channels, int input_height, int input_width,
                int kernel_height, int kernel_width, int stride_height, int stride_width,
-               int padding_height, int padding_width, PaddingType padding_type, int batch_size)
+               int padding_height, int padding_width, PaddingType padding_type, int batch_size,
+               const std::vector<float>& bias, int dilation_height, int dilation_width)
     : Layer(context),
       uniform_buffer_(context, sizeof(UniformData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
       weights_buffer_(context, BufferSize(weights), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+      bias_buffer_(context, static_cast<VkDeviceSize>(output_channels) * sizeof(float),
+                   VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
       uniform_data_{
           .input_width = input_width,
           .input_height = input_height,
@@ -32,12 +36,13 @@ Conv2D::Conv2D(core::vulkan::VulkanContext* context, const std::vector<float>& w
           .stride_height = stride_height,
           .padding_width = padding_width,
           .padding_height = padding_height,
-          .reserved_0 = 0,
-          .reserved_1 = 0,
+          .dilation_width = dilation_width,
+          .dilation_height = dilation_height,
       } {
   if (input_channels <= 0 || output_channels <= 0 || input_height <= 0 || input_width <= 0 ||
       kernel_height <= 0 || kernel_width <= 0 || stride_height <= 0 || stride_width <= 0 ||
-      padding_height < 0 || padding_width < 0 || batch_size <= 0) {
+      padding_height < 0 || padding_width < 0 || dilation_height <= 0 || dilation_width <= 0 ||
+      batch_size <= 0) {
     std::cerr << "Conv2D dimensions must be valid and positive\n";
     return;
   }
@@ -46,9 +51,12 @@ Conv2D::Conv2D(core::vulkan::VulkanContext* context, const std::vector<float>& w
     return;
   }
 
-  uniform_data_.output_width = (input_width + 2 * padding_width - kernel_width) / stride_width + 1;
+  const int effective_kernel_width = dilation_width * (kernel_width - 1) + 1;
+  const int effective_kernel_height = dilation_height * (kernel_height - 1) + 1;
+  uniform_data_.output_width =
+      (input_width + 2 * padding_width - effective_kernel_width) / stride_width + 1;
   uniform_data_.output_height =
-      (input_height + 2 * padding_height - kernel_height) / stride_height + 1;
+      (input_height + 2 * padding_height - effective_kernel_height) / stride_height + 1;
   if (uniform_data_.output_height <= 0 || uniform_data_.output_width <= 0) {
     std::cerr << "Conv2D output dimensions must be positive\n";
     return;
@@ -60,11 +68,21 @@ Conv2D::Conv2D(core::vulkan::VulkanContext* context, const std::vector<float>& w
     std::cerr << "Conv2D weights size does not match OIHW dimensions\n";
     return;
   }
+  if (!bias.empty() && bias.size() != static_cast<size_t>(output_channels)) {
+    std::cerr << "Conv2D bias size does not match its output channels\n";
+    return;
+  }
 
   uniform_buffer_.MapData(
       [this](void* data) { std::memcpy(data, &uniform_data_, sizeof(UniformData)); });
   weights_buffer_.MapData([&weights](void* data) {
     std::memcpy(data, weights.data(), weights.size() * sizeof(float));
+  });
+  bias_buffer_.MapData([&bias, output_channels](void* data) {
+    std::memset(data, 0, static_cast<size_t>(output_channels) * sizeof(float));
+    if (!bias.empty()) {
+      std::memcpy(data, bias.data(), bias.size() * sizeof(float));
+    }
   });
   valid_ = true;
 }
@@ -78,9 +96,10 @@ void Conv2D::Init() {
 
   CreateUniformBufferDescriptorSet(0, uniform_buffer_);
   CreateStorageBufferDescriptorSet(2, weights_buffer_);
+  CreateStorageBufferDescriptorSet(4, bias_buffer_);
 
-  const VkWriteDescriptorSet fixed_writes[] = {writes_[0], writes_[2]};
-  vkUpdateDescriptorSets(context_->logical_device, 2, fixed_writes, 0, nullptr);
+  const VkWriteDescriptorSet fixed_writes[] = {writes_[0], writes_[2], writes_[4]};
+  vkUpdateDescriptorSets(context_->logical_device, 3, fixed_writes, 0, nullptr);
 
   const std::string cache = GetPipelineCache();
   if (!cache.empty() && !std::filesystem::exists(cache)) {
@@ -128,7 +147,8 @@ std::vector<core::vulkan::BindingInfo> Conv2D::GetBindingInfo() const {
   return {{0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT},
           {1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT},
           {2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT},
-          {3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT}};
+          {3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT},
+          {4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT}};
 }
 
 const std::vector<uint32_t>& Conv2D::LoadShaderCode() const {

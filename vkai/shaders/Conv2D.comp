@@ -18,8 +18,8 @@ layout(binding = 0) uniform UniformBufferObject {
 
     int padding_width;
     int padding_height;
-    int reserved_0;
-    int reserved_1;
+    int dilation_width;
+    int dilation_height;
 }
 ubo;
 
@@ -33,6 +33,10 @@ layout(set = 0, binding = 2, std430) readonly buffer WeightBuffer {
 
 layout(set = 0, binding = 3, std430) writeonly buffer OutputBuffer {
     float output_buffer[];
+};
+
+layout(set = 0, binding = 4, std430) readonly buffer BiasBuffer {
+    float bias_buffer[];
 };
 
 layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
@@ -72,13 +76,13 @@ void main() {
     int output_channel = int(remaining % uint(ubo.output_channels));
     int batch = int(remaining / uint(ubo.output_channels));
 
-    float sum = 0.0;
+    float sum = bias_buffer[output_channel];
     for (int input_channel = 0; input_channel < ubo.input_channels; ++input_channel) {
         for (int kernel_y = 0; kernel_y < ubo.kernel_height; ++kernel_y) {
-            int input_y = output_y * ubo.stride_height + kernel_y - ubo.padding_height;
+            int input_y = output_y * ubo.stride_height + kernel_y * ubo.dilation_height - ubo.padding_height;
 
             for (int kernel_x = 0; kernel_x < ubo.kernel_width; ++kernel_x) {
-                int input_x = output_x * ubo.stride_width + kernel_x - ubo.padding_width;
+                int input_x = output_x * ubo.stride_width + kernel_x * ubo.dilation_width - ubo.padding_width;
                 int sample_x = input_x;
                 int sample_y = input_y;
 
