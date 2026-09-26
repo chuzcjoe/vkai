@@ -5,6 +5,10 @@ layout(binding = 0) uniform UniformBufferObject {
     int elements_per_channel;
     int batch_size;
     int element_count;
+    int mode;
+    int reserved_0;
+    int reserved_1;
+    int reserved_2;
 } ubo;
 
 layout(set = 0, binding = 1, std430) readonly buffer InputBuffer {
@@ -26,6 +30,9 @@ void main() {
     if (index >= uint(ubo.element_count)) {
         return;
     }
-    uint channel = (index / uint(ubo.elements_per_channel)) % uint(ubo.channel_count);
-    output_buffer[index] = input_buffer[index] + addend_buffer[channel];
+    uint addend_index = index;
+    if (ubo.mode == 0) {
+        addend_index = (index / uint(ubo.elements_per_channel)) % uint(ubo.channel_count);
+    }
+    output_buffer[index] = input_buffer[index] + addend_buffer[addend_index];
 }

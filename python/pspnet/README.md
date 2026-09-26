@@ -32,6 +32,6 @@ For C++ Conv2D regression tests, export compact real PSPNet tensors with:
 python python/pspnet/export_conv2d_reference.py --image /path/to/photo.jpg
 ```
 
-This exports a dilated ResNet bottleneck convolution and the bias-bearing PSPNet
-classifier convolution to `test_data/`. The generated binary tensors are ignored
-by Git.
+This exports a dilated ResNet bottleneck convolution, the bias-bearing PSPNet
+classifier convolution, and a ResNet residual Add to `test_data/`. The generated
+binary tensors are ignored by Git.

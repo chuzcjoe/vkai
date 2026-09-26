@@ -4,12 +4,18 @@
 
 namespace vkai {
 
-// Adds a per-channel tensor to an NCHW input. The addend has channel_count elements and is
-// broadcast across every spatial element and batch item.
+enum class AddMode {
+  // The addend has channel_count elements and is broadcast over NCHW spatial elements and batches.
+  kChannelBias,
+  // Input and addend have the same NCHW shape and are added element by element.
+  kElementwise,
+};
+
+// Adds either a per-channel tensor or a same-shape tensor to an NCHW input.
 class Add : public Layer {
  public:
   Add(core::vulkan::VulkanContext* context, int channel_count, int elements_per_channel,
-      int batch_size = 1);
+      int batch_size = 1, AddMode mode = AddMode::kChannelBias);
 
   void Init() override;
 
@@ -31,11 +37,15 @@ class Add : public Layer {
   const std::string GetPipelineCache() const override;
 
  private:
-  struct UniformData {
+  struct alignas(16) UniformData {
     int channel_count;
     int elements_per_channel;
     int batch_size;
     int element_count;
+    int mode;
+    int reserved_0;
+    int reserved_1;
+    int reserved_2;
   } uniform_data_;
 
   core::vulkan::VulkanBuffer uniform_buffer_;

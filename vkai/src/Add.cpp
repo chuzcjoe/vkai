@@ -7,17 +7,22 @@
 namespace vkai {
 
 Add::Add(core::vulkan::VulkanContext* context, int channel_count, int elements_per_channel,
-         int batch_size)
+         int batch_size, AddMode mode)
     : Layer(context),
       uniform_data_{
           .channel_count = channel_count,
           .elements_per_channel = elements_per_channel,
           .batch_size = batch_size,
           .element_count = 0,
+          .mode = static_cast<int>(mode),
+          .reserved_0 = 0,
+          .reserved_1 = 0,
+          .reserved_2 = 0,
       },
       uniform_buffer_(context, sizeof(UniformData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) {
-  if (channel_count <= 0 || elements_per_channel <= 0 || batch_size <= 0) {
+  if (channel_count <= 0 || elements_per_channel <= 0 || batch_size <= 0 ||
+      (mode != AddMode::kChannelBias && mode != AddMode::kElementwise)) {
     std::cerr << "Add dimensions must be positive\n";
     return;
   }
@@ -62,8 +67,10 @@ void Add::Execute(const VkCommandBuffer& command_buffer,
   }
   const VkDeviceSize input_size =
       static_cast<VkDeviceSize>(uniform_data_.element_count) * sizeof(float);
-  const VkDeviceSize addend_size =
-      static_cast<VkDeviceSize>(uniform_data_.channel_count) * sizeof(float);
+  const VkDeviceSize addend_elements = uniform_data_.mode == static_cast<int>(AddMode::kElementwise)
+                                           ? uniform_data_.element_count
+                                           : uniform_data_.channel_count;
+  const VkDeviceSize addend_size = addend_elements * sizeof(float);
   if (input_buffer.Size() < input_size || addend_buffer.Size() < addend_size ||
       output_buffer.Size() < input_size) {
     std::cerr << "Add input, addend, or output buffer is too small\n";

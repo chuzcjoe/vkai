@@ -56,6 +56,21 @@ def capture_conv(module: torch.nn.Conv2d, name: str, captured: dict[str, Any]) -
     return module.register_forward_hook(hook)
 
 
+def capture_residual_add(block: torch.nn.Module, captured: dict[str, Any]) -> list[Any]:
+    def block_input_hook(_: torch.nn.Module, inputs: tuple[torch.Tensor, ...]) -> None:
+        captured["residual_add_input_1"] = inputs[0].detach()
+
+    def main_branch_hook(
+        _: torch.nn.Module, __: tuple[torch.Tensor, ...], output: torch.Tensor
+    ) -> None:
+        captured["residual_add_input_0"] = output.detach()
+
+    return [
+        block.register_forward_pre_hook(block_input_hook),
+        block.bn3.register_forward_hook(main_branch_hook),
+    ]
+
+
 def main() -> None:
     args = parse_args()
     image_path = args.image.expanduser().resolve()
@@ -72,6 +87,7 @@ def main() -> None:
     }
     captured: dict[str, Any] = {}
     hooks = [capture_conv(layer, name, captured) for name, layer in selected_layers.items()]
+    hooks.extend(capture_residual_add(model.encoder.layer3[1], captured))
     try:
         with Image.open(image_path) as opened_image:
             image = opened_image.convert("RGB")
@@ -100,6 +116,16 @@ def main() -> None:
         if layer.bias is not None:
             layer_metadata["bias"] = export_tensor(layer.bias, output_dir / f"{name}_bias.bin")
         metadata["layers"][name] = layer_metadata
+    residual_add_output = captured["residual_add_input_0"] + captured["residual_add_input_1"]
+    metadata["residual_add"] = {
+        "input_0": export_tensor(
+            captured["residual_add_input_0"], output_dir / "residual_add_input_0.bin"
+        ),
+        "input_1": export_tensor(
+            captured["residual_add_input_1"], output_dir / "residual_add_input_1.bin"
+        ),
+        "output": export_tensor(residual_add_output, output_dir / "residual_add_output.bin"),
+    }
     (output_dir / "metadata.json").write_text(json.dumps(metadata, indent=2) + "\n")
     print(f"PSPNet Conv2D reference data: {output_dir}")
 
