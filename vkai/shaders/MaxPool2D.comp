@@ -1,0 +1,60 @@
+#version 450
+
+layout(binding = 0) uniform UniformBufferObject {
+    int input_width;
+    int input_height;
+    int input_channels;
+    int batch_size;
+
+    int output_width;
+    int output_height;
+    int kernel_width;
+    int kernel_height;
+
+    int stride_width;
+    int stride_height;
+    int reserved_0;
+    int reserved_1;
+} ubo;
+
+layout(set = 0, binding = 1, std430) readonly buffer InputBuffer {
+    float input_buffer[];
+};
+
+layout(set = 0, binding = 2, std430) writeonly buffer OutputBuffer {
+    float output_buffer[];
+};
+
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+// input: [batch_size, input_channels, input_height, input_width] (NCHW)
+// output: [batch_size, input_channels, output_height, output_width] (NCHW)
+void main() {
+    uint output_index = gl_GlobalInvocationID.x;
+    uint output_element_count = uint(
+        ubo.batch_size * ubo.input_channels * ubo.output_height * ubo.output_width);
+    if (output_index >= output_element_count) {
+        return;
+    }
+
+    uint remaining = output_index;
+    int output_x = int(remaining % uint(ubo.output_width));
+    remaining /= uint(ubo.output_width);
+    int output_y = int(remaining % uint(ubo.output_height));
+    remaining /= uint(ubo.output_height);
+    int channel = int(remaining % uint(ubo.input_channels));
+    int batch = int(remaining / uint(ubo.input_channels));
+
+    float maximum = -3.402823466e+38;
+    int input_y_start = output_y * ubo.stride_height;
+    int input_x_start = output_x * ubo.stride_width;
+    for (int kernel_y = 0; kernel_y < ubo.kernel_height; ++kernel_y) {
+        for (int kernel_x = 0; kernel_x < ubo.kernel_width; ++kernel_x) {
+            int input_index = ((batch * ubo.input_channels + channel) * ubo.input_height +
+                               input_y_start + kernel_y) * ubo.input_width +
+                              input_x_start + kernel_x;
+            maximum = max(maximum, input_buffer[input_index]);
+        }
+    }
+    output_buffer[output_index] = maximum;
+}

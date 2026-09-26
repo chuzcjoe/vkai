@@ -1,0 +1,31 @@
+#version 450
+
+layout(binding = 0) uniform UniformBufferObject {
+    int channel_count;
+    int elements_per_channel;
+    int batch_size;
+    int element_count;
+} ubo;
+
+layout(set = 0, binding = 1, std430) readonly buffer InputBuffer {
+    float input_buffer[];
+};
+
+layout(set = 0, binding = 2, std430) readonly buffer AddendBuffer {
+    float addend_buffer[];
+};
+
+layout(set = 0, binding = 3, std430) writeonly buffer OutputBuffer {
+    float output_buffer[];
+};
+
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+void main() {
+    uint index = gl_GlobalInvocationID.x;
+    if (index >= uint(ubo.element_count)) {
+        return;
+    }
+    uint channel = (index / uint(ubo.elements_per_channel)) % uint(ubo.channel_count);
+    output_buffer[index] = input_buffer[index] + addend_buffer[channel];
+}

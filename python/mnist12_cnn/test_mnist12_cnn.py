@@ -320,8 +320,21 @@ def run_inference(
         logits, outputs = model.forward_with_intermediates(input_tensor)
         probabilities = torch.softmax(logits, dim=1)
 
+    graph_tensors: dict[str, torch.Tensor] = {
+        "Input3": input_tensor,
+        "Parameter5": model.conv1.weight,
+        "Parameter6": model.conv1.bias,
+        "Parameter87": model.conv2.weight,
+        "Parameter88": model.conv2.bias,
+        "fc.weight": model.fc.weight,
+        "fc.bias": model.fc.bias,
+    }
     layers = []
     for execution_index, definition in enumerate(LAYER_DEFINITIONS, start=1):
+        output = outputs[definition["output_name"]]
+        input_tensors = [
+            (input_name, graph_tensors[input_name]) for input_name in definition["inputs"]
+        ]
         layers.append(
             {
                 "execution_index": execution_index,
@@ -331,11 +344,11 @@ def run_inference(
                 "output_name": definition["output_name"],
                 "inputs": definition["inputs"],
                 "attributes": definition["attributes"],
-                "tensor": (
-                    outputs[definition["output_name"]].detach().cpu().contiguous()
-                ),
+                "input_tensors": input_tensors,
+                "tensor": output.detach().cpu().contiguous(),
             }
         )
+        graph_tensors[definition["output_name"]] = output
     return logits.cpu(), probabilities.cpu(), layers
 
 
@@ -381,13 +394,19 @@ def export_reference_data(
     resolved_output_dir.mkdir(parents=True, exist_ok=True)
 
     input_metadata = export_tensor(input_tensor, resolved_output_dir / "000_input.bin")
-    parameter_metadata = {
-        "conv1.weight": export_tensor(
-            model.conv1.weight, resolved_output_dir / "conv1_weight.bin"
-        )
-    }
     layer_metadata = []
     for layer in layers:
+        input_metadata = []
+        for input_index, (input_name, input_tensor) in enumerate(layer["input_tensors"]):
+            input_filename = (
+                f"{layer['execution_index']:03d}_"
+                f"{safe_filename_component(str(layer['node']))}_"
+                f"{safe_filename_component(str(layer['op_type']))}_input_{input_index}.bin"
+            )
+            input_metadata.append(
+                {"name": input_name}
+                | export_tensor(input_tensor, resolved_output_dir / input_filename)
+            )
         filename = (
             f"{layer['execution_index']:03d}_"
             f"{safe_filename_component(str(layer['node']))}_"
@@ -397,7 +416,12 @@ def export_reference_data(
             layer["tensor"], resolved_output_dir / filename
         )
         layer_metadata.append(
-            {key: value for key, value in layer.items() if key != "tensor"}
+            {
+                key: value
+                for key, value in layer.items()
+                if key not in {"tensor", "input_tensors", "inputs"}
+            }
+            | {"inputs": input_metadata}
             | tensor_metadata
         )
 
@@ -426,12 +450,13 @@ def export_reference_data(
         "prediction": top5[0],
         "top5": top5,
         "input": input_metadata,
-        "parameters": parameter_metadata,
         "layers": layer_metadata,
         "model_logits": logits_metadata,
         "softmax_output": probabilities_metadata,
         "notes": [
             "Operations preserve the original ONNX node names and execution order.",
+            "Every layer input and output is exported; repeated intermediate tensors are "
+            "intentionally retained per consuming layer.",
             "Conv and bias Add remain separate to preserve intermediate outputs.",
             "model_logits.bin duplicates the final Add output for convenience.",
             "Softmax is applied after the model because MNIST-12 outputs logits.",

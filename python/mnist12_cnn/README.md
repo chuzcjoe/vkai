@@ -41,7 +41,8 @@ inference, softmax, and intermediate tensors are implemented with PyTorch.
 By default, generated reference files are written to `test_data/`:
 
 - `000_input.bin`: preprocessed NCHW model input.
-- `conv1_weight.bin`: first Conv2D weights in OIHW layout for the C++ unit test.
+- `NNN_<node>_<op>_input_<index>.bin`: every input consumed by each operation,
+  including weights and biases.
 - `NNN_<node>_<op>_output.bin`: every corresponding PyTorch operation output.
 - `model_logits.bin`: final 10-class logits before softmax.
 - `softmax_output.bin`: final probabilities.

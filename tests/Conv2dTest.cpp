@@ -63,7 +63,7 @@ TEST(Conv2dTest, MatchesMNIST12FirstConvolution) {
   std::vector<float> weights;
   std::vector<float> reference;
   ASSERT_TRUE(ReadFloatBinary(data_dir / "000_input.bin", input));
-  ASSERT_TRUE(ReadFloatBinary(data_dir / "conv1_weight.bin", weights));
+  ASSERT_TRUE(ReadFloatBinary(data_dir / "001_Convolution28_Conv_input_1.bin", weights));
   ASSERT_TRUE(ReadFloatBinary(data_dir / "001_Convolution28_Conv_output.bin", reference));
 
   ASSERT_EQ(input.size(),
