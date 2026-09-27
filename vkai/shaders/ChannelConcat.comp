@@ -1,0 +1,58 @@
+#version 450
+
+layout(binding = 0) uniform UniformBufferObject {
+    int input_width;
+    int input_height;
+    int batch_size;
+    int output_channels;
+    int input_count;
+    int input_channels_0;
+    int input_channels_1;
+    int input_channels_2;
+    int input_channels_3;
+    int input_channels_4;
+    int reserved_0;
+    int reserved_1;
+} ubo;
+
+layout(binding = 1, std430) readonly buffer InputBuffer0 { float input_0[]; };
+layout(binding = 2, std430) readonly buffer InputBuffer1 { float input_1[]; };
+layout(binding = 3, std430) readonly buffer InputBuffer2 { float input_2[]; };
+layout(binding = 4, std430) readonly buffer InputBuffer3 { float input_3[]; };
+layout(binding = 5, std430) readonly buffer InputBuffer4 { float input_4[]; };
+layout(binding = 6, std430) writeonly buffer OutputBuffer { float output_buffer[]; };
+layout(local_size_x = 256) in;
+
+float ReadInput(int input_index, uint element_index) {
+    if (input_index == 0) return input_0[element_index];
+    if (input_index == 1) return input_1[element_index];
+    if (input_index == 2) return input_2[element_index];
+    if (input_index == 3) return input_3[element_index];
+    return input_4[element_index];
+}
+
+void main() {
+    uint output_index = gl_GlobalInvocationID.x;
+    uint element_count = uint(ubo.batch_size * ubo.output_channels *
+                              ubo.input_height * ubo.input_width);
+    if (output_index >= element_count) return;
+    uint spatial_size = uint(ubo.input_height * ubo.input_width);
+    uint spatial_index = output_index % spatial_size;
+    uint channel_index = (output_index / spatial_size) % uint(ubo.output_channels);
+    uint batch_index = output_index / (spatial_size * uint(ubo.output_channels));
+    int channel_offset = 0;
+    int input_channels[] = int[](ubo.input_channels_0, ubo.input_channels_1,
+                                 ubo.input_channels_2, ubo.input_channels_3,
+                                 ubo.input_channels_4);
+    for (int input_index = 0; input_index < ubo.input_count; ++input_index) {
+        int channel_count = input_channels[input_index];
+        if (channel_index < uint(channel_offset + channel_count)) {
+            uint source_channel = channel_index - uint(channel_offset);
+            uint source_index = (batch_index * uint(channel_count) + source_channel) *
+                                spatial_size + spatial_index;
+            output_buffer[output_index] = ReadInput(input_index, source_index);
+            return;
+        }
+        channel_offset += channel_count;
+    }
+}
