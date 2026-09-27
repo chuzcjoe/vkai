@@ -4,9 +4,20 @@
 
 namespace vkai {
 
+enum class SoftmaxMode {
+  // Treat each batch item as one contiguous vector. This is the existing behavior.
+  kContiguousPerBatch,
+  // Treat each NCHW spatial position as one vector across the channel dimension.
+  kChannelNCHW,
+};
+
 class Softmax : public Layer {
  public:
+  // Computes softmax over each contiguous batch vector.
   Softmax(core::vulkan::VulkanContext* context, int input_size, int batch_size = 1);
+  // Computes softmax over C for every NCHW location. mode must be kChannelNCHW.
+  Softmax(core::vulkan::VulkanContext* context, int channel_count, int input_height,
+          int input_width, int batch_size, SoftmaxMode mode);
 
   void Init() override;
 
@@ -24,9 +35,15 @@ class Softmax : public Layer {
  private:
   core::vulkan::VulkanBuffer uniform_buffer_;
 
-  struct UniformData {
-    int input_size;
+  struct alignas(16) UniformData {
+    int channel_count;
     int batch_size;
+    int input_height;
+    int input_width;
+    int mode;
+    int reserved_0;
+    int reserved_1;
+    int reserved_2;
   } uniform_data_;
 
   bool valid_ = false;

@@ -10,9 +10,39 @@ Softmax::Softmax(core::vulkan::VulkanContext* context, int input_size, int batch
     : Layer(context),
       uniform_buffer_(context, sizeof(UniformData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-      uniform_data_{.input_size = input_size, .batch_size = batch_size} {
+      uniform_data_{.channel_count = input_size,
+                    .batch_size = batch_size,
+                    .input_height = 1,
+                    .input_width = 1,
+                    .mode = static_cast<int>(SoftmaxMode::kContiguousPerBatch),
+                    .reserved_0 = 0,
+                    .reserved_1 = 0,
+                    .reserved_2 = 0} {
   if (input_size <= 0 || batch_size <= 0) {
     std::cerr << "Softmax dimensions must be positive\n";
+    return;
+  }
+  uniform_buffer_.MapData(
+      [this](void* data) { std::memcpy(data, &uniform_data_, sizeof(UniformData)); });
+  valid_ = true;
+}
+
+Softmax::Softmax(core::vulkan::VulkanContext* context, int channel_count, int input_height,
+                 int input_width, int batch_size, SoftmaxMode mode)
+    : Layer(context),
+      uniform_buffer_(context, sizeof(UniformData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+      uniform_data_{.channel_count = channel_count,
+                    .batch_size = batch_size,
+                    .input_height = input_height,
+                    .input_width = input_width,
+                    .mode = static_cast<int>(mode),
+                    .reserved_0 = 0,
+                    .reserved_1 = 0,
+                    .reserved_2 = 0} {
+  if (channel_count <= 0 || input_height <= 0 || input_width <= 0 || batch_size <= 0 ||
+      mode != SoftmaxMode::kChannelNCHW) {
+    std::cerr << "Softmax NCHW dimensions must be positive and mode must be kChannelNCHW\n";
     return;
   }
   uniform_buffer_.MapData(
@@ -44,7 +74,8 @@ void Softmax::Execute(const VkCommandBuffer& command_buffer,
     return;
   }
   const VkDeviceSize required_size = static_cast<VkDeviceSize>(uniform_data_.batch_size) *
-                                     uniform_data_.input_size * sizeof(float);
+                                     uniform_data_.channel_count * uniform_data_.input_height *
+                                     uniform_data_.input_width * sizeof(float);
   if (input_buffer.Size() < required_size || output_buffer.Size() < required_size) {
     std::cerr << "Softmax input or output buffer is too small\n";
     return;
@@ -56,8 +87,11 @@ void Softmax::Execute(const VkCommandBuffer& command_buffer,
                           &descriptor_set_, 0, nullptr);
 
   constexpr uint32_t kLocalSize = 64;
-  const uint32_t group_x =
-      (static_cast<uint32_t>(uniform_data_.batch_size) + kLocalSize - 1) / kLocalSize;
+  const uint32_t vectors = static_cast<uint32_t>(uniform_data_.batch_size) *
+                           (uniform_data_.mode == static_cast<int>(SoftmaxMode::kChannelNCHW)
+                                ? uniform_data_.input_height * uniform_data_.input_width
+                                : 1);
+  const uint32_t group_x = (vectors + kLocalSize - 1) / kLocalSize;
   vkCmdDispatch(command_buffer, group_x, 1, 1);
 }
 

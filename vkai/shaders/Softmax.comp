@@ -1,8 +1,14 @@
 #version 450
 
 layout(set = 0, binding = 0) uniform UniformBufferObject {
-    int input_size;
+    int channel_count;
     int batch_size;
+    int input_height;
+    int input_width;
+    int mode;
+    int reserved_0;
+    int reserved_1;
+    int reserved_2;
 } ubo;
 
 layout(set = 0, binding = 1, std430) readonly buffer InputBuffer {
@@ -17,26 +23,38 @@ layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 
 void main()
 {
-    uint batch_index = gl_GlobalInvocationID.x;
-    if (batch_index >= uint(ubo.batch_size)) {
+    uint vector_index = gl_GlobalInvocationID.x;
+    uint spatial_size = uint(ubo.input_height * ubo.input_width);
+    uint vector_count = uint(ubo.batch_size);
+    if (ubo.mode == 1) {
+        vector_count *= spatial_size;
+    }
+    if (vector_index >= vector_count) {
         return;
     }
 
-    uint offset = batch_index * uint(ubo.input_size);
+    uint offset = vector_index * uint(ubo.channel_count);
+    uint stride = 1;
+    if (ubo.mode == 1) {
+        uint batch_index = vector_index / spatial_size;
+        uint spatial_index = vector_index % spatial_size;
+        offset = batch_index * uint(ubo.channel_count) * spatial_size + spatial_index;
+        stride = spatial_size;
+    }
 
     // Subtracting the largest value keeps exp() in a numerically stable range.
     float max_value = input_buffer[offset];
-    for (uint i = 1; i < uint(ubo.input_size); ++i) {
-        max_value = max(max_value, input_buffer[offset + i]);
+    for (uint i = 1; i < uint(ubo.channel_count); ++i) {
+        max_value = max(max_value, input_buffer[offset + i * stride]);
     }
 
     float exponential_sum = 0.0;
-    for (uint i = 0; i < uint(ubo.input_size); ++i) {
-        exponential_sum += exp(input_buffer[offset + i] - max_value);
+    for (uint i = 0; i < uint(ubo.channel_count); ++i) {
+        exponential_sum += exp(input_buffer[offset + i * stride] - max_value);
     }
 
-    for (uint i = 0; i < uint(ubo.input_size); ++i) {
-        output_buffer[offset + i] =
-            exp(input_buffer[offset + i] - max_value) / exponential_sum;
+    for (uint i = 0; i < uint(ubo.channel_count); ++i) {
+        output_buffer[offset + i * stride] =
+            exp(input_buffer[offset + i * stride] - max_value) / exponential_sum;
     }
 }
