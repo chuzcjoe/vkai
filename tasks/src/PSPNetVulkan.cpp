@@ -17,6 +17,7 @@
 #include "MaxPool2D.h"
 #include "Relu.h"
 #include "Softmax.h"
+#include "Synchronization.h"
 #include "WeightsLoader.h"
 
 namespace vkai {
@@ -24,29 +25,6 @@ namespace {
 
 constexpr VkMemoryPropertyFlags kHostVisibleMemory =
     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-
-void InsertComputeBarrier(const VkCommandBuffer& command_buffer) {
-  const VkMemoryBarrier barrier{.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
-                                .srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
-                                .dstAccessMask = VK_ACCESS_SHADER_READ_BIT};
-  vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                       VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &barrier, 0, nullptr, 0,
-                       nullptr);
-}
-
-void InsertHostReadBarrier(const VkCommandBuffer& command_buffer,
-                           const core::vulkan::VulkanBuffer& buffer) {
-  const VkBufferMemoryBarrier barrier{.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-                                      .srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
-                                      .dstAccessMask = VK_ACCESS_HOST_READ_BIT,
-                                      .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-                                      .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-                                      .buffer = buffer.buffer,
-                                      .offset = 0,
-                                      .size = VK_WHOLE_SIZE};
-  vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                       VK_PIPELINE_STAGE_HOST_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
-}
 
 int ConvOutputSize(int input, int kernel, int stride, int padding, int dilation) {
   return (input + 2 * padding - dilation * (kernel - 1) - 1) / stride + 1;
@@ -297,9 +275,9 @@ struct PSPNetVulkan::Impl {
     if (!valid) return output_buffer;
     for (const Operation& operation : operations) {
       operation.execute(command_buffer);
-      InsertComputeBarrier(command_buffer);
+      Synchronization::InsertComputeBarrier(command_buffer);
     }
-    InsertHostReadBarrier(command_buffer, output_buffer);
+    Synchronization::InsertHostReadBarrier(command_buffer, output_buffer);
     return output_buffer;
   }
 

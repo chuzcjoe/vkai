@@ -25,11 +25,6 @@ class MNISTVulkan {
  private:
   bool LoadWeights(const std::string& weights_file);
 
-  void InsertComputeBarrier(const VkCommandBuffer& command_buffer);
-
-  void InsertHostReadBarrier(const VkCommandBuffer& command_buffer,
-                             const core::vulkan::VulkanBuffer& buffer);
-
   core::vulkan::VulkanContext* context_;
   core::vulkan::VulkanBuffer& input_buffer_;
   core::vulkan::VulkanBuffer& output_buffer_;

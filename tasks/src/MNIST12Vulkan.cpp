@@ -8,6 +8,8 @@
 #include <utility>
 #include <vector>
 
+#include "Synchronization.h"
+
 namespace vkai {
 namespace {
 
@@ -136,29 +138,6 @@ void MNIST12Vulkan::Init() {
   fc_->Init();
 }
 
-void MNIST12Vulkan::InsertComputeBarrier(const VkCommandBuffer& command_buffer) {
-  const VkMemoryBarrier barrier{.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
-                                .srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
-                                .dstAccessMask = VK_ACCESS_SHADER_READ_BIT};
-  vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                       VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &barrier, 0, nullptr, 0,
-                       nullptr);
-}
-
-void MNIST12Vulkan::InsertHostReadBarrier(const VkCommandBuffer& command_buffer,
-                                          const core::vulkan::VulkanBuffer& buffer) {
-  const VkBufferMemoryBarrier barrier{.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-                                      .srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
-                                      .dstAccessMask = VK_ACCESS_HOST_READ_BIT,
-                                      .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-                                      .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-                                      .buffer = buffer.buffer,
-                                      .offset = 0,
-                                      .size = VK_WHOLE_SIZE};
-  vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                       VK_PIPELINE_STAGE_HOST_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
-}
-
 core::vulkan::VulkanBuffer& MNIST12Vulkan::Run(const VkCommandBuffer& command_buffer) {
   if (!valid_) {
     std::cerr << "Cannot run an invalid MNIST-12 task\n";
@@ -167,21 +146,21 @@ core::vulkan::VulkanBuffer& MNIST12Vulkan::Run(const VkCommandBuffer& command_bu
   const auto run_layer = [&](auto& layer, const core::vulkan::VulkanBuffer& input,
                              core::vulkan::VulkanBuffer& output) {
     layer->Execute(command_buffer, input, output);
-    InsertComputeBarrier(command_buffer);
+    Synchronization::InsertComputeBarrier(command_buffer);
   };
 
   run_layer(conv1_, input_buffer_, output_buffer_);
   add1_->Execute(command_buffer, output_buffer_, *conv1_bias_buffer_, *workspace_buffer_);
-  InsertComputeBarrier(command_buffer);
+  Synchronization::InsertComputeBarrier(command_buffer);
   run_layer(relu1_, *workspace_buffer_, output_buffer_);
   run_layer(pool1_, output_buffer_, *workspace_buffer_);
   run_layer(conv2_, *workspace_buffer_, output_buffer_);
   add2_->Execute(command_buffer, output_buffer_, *conv2_bias_buffer_, *workspace_buffer_);
-  InsertComputeBarrier(command_buffer);
+  Synchronization::InsertComputeBarrier(command_buffer);
   run_layer(relu2_, *workspace_buffer_, output_buffer_);
   run_layer(pool2_, output_buffer_, *workspace_buffer_);
   run_layer(fc_, *workspace_buffer_, output_buffer_);
-  InsertHostReadBarrier(command_buffer, output_buffer_);
+  Synchronization::InsertHostReadBarrier(command_buffer, output_buffer_);
   return output_buffer_;
 }
 

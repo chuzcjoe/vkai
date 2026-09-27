@@ -3,6 +3,8 @@
 #include <iostream>
 #include <utility>
 
+#include "Synchronization.h"
+
 namespace vkai {
 namespace {
 
@@ -66,46 +68,16 @@ void MNISTVulkan::Init() {
   }
 }
 
-void MNISTVulkan::InsertComputeBarrier(const VkCommandBuffer& command_buffer) {
-  const VkMemoryBarrier compute_barrier{
-      .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
-      .srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
-      .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
-  };
-
-  vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                       VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &compute_barrier, 0, nullptr, 0,
-                       nullptr);
-}
-
-void MNISTVulkan::InsertHostReadBarrier(const VkCommandBuffer& command_buffer,
-                                        const core::vulkan::VulkanBuffer& buffer) {
-  const VkBufferMemoryBarrier host_read_barrier{
-      .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-      .srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
-      .dstAccessMask = VK_ACCESS_HOST_READ_BIT,
-      .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-      .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-      .buffer = buffer.buffer,
-      .offset = 0,
-      .size = VK_WHOLE_SIZE,
-  };
-
-  vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                       VK_PIPELINE_STAGE_HOST_BIT, 0, 0, nullptr, 1, &host_read_barrier, 0,
-                       nullptr);
-}
-
 core::vulkan::VulkanBuffer& MNISTVulkan::Run(const VkCommandBuffer& command_buffer) {
   core::vulkan::VulkanBuffer* input_buffer = &input_buffer_;
   core::vulkan::VulkanBuffer* output_buffer = &output_buffer_;
 
   for (auto& layer : layers_) {
     layer->Execute(command_buffer, *input_buffer, *output_buffer);
-    InsertComputeBarrier(command_buffer);
+    Synchronization::InsertComputeBarrier(command_buffer);
     std::swap(input_buffer, output_buffer);
   }
-  InsertHostReadBarrier(command_buffer, *input_buffer);
+  Synchronization::InsertHostReadBarrier(command_buffer, *input_buffer);
   return *input_buffer;
 }
 
