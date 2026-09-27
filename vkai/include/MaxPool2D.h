@@ -4,12 +4,12 @@
 
 namespace vkai {
 
-// Max pooling over NCHW tensors without padding.
+// Max pooling over NCHW tensors with symmetric zero-padding.
 class MaxPool2D : public Layer {
  public:
   MaxPool2D(core::vulkan::VulkanContext* context, int input_channels, int input_height,
             int input_width, int kernel_height, int kernel_width, int stride_height,
-            int stride_width, int batch_size = 1);
+            int stride_width, int batch_size = 1, int padding_height = 0, int padding_width = 0);
 
   void Init() override;
 
@@ -41,8 +41,8 @@ class MaxPool2D : public Layer {
 
     int stride_width;
     int stride_height;
-    int reserved_0;
-    int reserved_1;
+    int padding_width;
+    int padding_height;
   };
 
   static_assert(sizeof(UniformData) == 48);

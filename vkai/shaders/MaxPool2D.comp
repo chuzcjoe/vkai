@@ -13,8 +13,8 @@ layout(binding = 0) uniform UniformBufferObject {
 
     int stride_width;
     int stride_height;
-    int reserved_0;
-    int reserved_1;
+    int padding_width;
+    int padding_height;
 } ubo;
 
 layout(set = 0, binding = 1, std430) readonly buffer InputBuffer {
@@ -46,13 +46,18 @@ void main() {
     int batch = int(remaining / uint(ubo.input_channels));
 
     float maximum = -3.402823466e+38;
-    int input_y_start = output_y * ubo.stride_height;
-    int input_x_start = output_x * ubo.stride_width;
+    int input_y_start = output_y * ubo.stride_height - ubo.padding_height;
+    int input_x_start = output_x * ubo.stride_width - ubo.padding_width;
     for (int kernel_y = 0; kernel_y < ubo.kernel_height; ++kernel_y) {
         for (int kernel_x = 0; kernel_x < ubo.kernel_width; ++kernel_x) {
+            int input_y = input_y_start + kernel_y;
+            int input_x = input_x_start + kernel_x;
+            if (input_y < 0 || input_y >= ubo.input_height || input_x < 0 ||
+                input_x >= ubo.input_width) {
+                continue;
+            }
             int input_index = ((batch * ubo.input_channels + channel) * ubo.input_height +
-                               input_y_start + kernel_y) * ubo.input_width +
-                              input_x_start + kernel_x;
+                               input_y) * ubo.input_width + input_x;
             maximum = max(maximum, input_buffer[input_index]);
         }
     }

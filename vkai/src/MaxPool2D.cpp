@@ -8,7 +8,7 @@ namespace vkai {
 
 MaxPool2D::MaxPool2D(core::vulkan::VulkanContext* context, int input_channels, int input_height,
                      int input_width, int kernel_height, int kernel_width, int stride_height,
-                     int stride_width, int batch_size)
+                     int stride_width, int batch_size, int padding_height, int padding_width)
     : Layer(context),
       uniform_buffer_(context, sizeof(UniformData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
@@ -23,8 +23,8 @@ MaxPool2D::MaxPool2D(core::vulkan::VulkanContext* context, int input_channels, i
           .kernel_height = kernel_height,
           .stride_width = stride_width,
           .stride_height = stride_height,
-          .reserved_0 = 0,
-          .reserved_1 = 0,
+          .padding_width = padding_width,
+          .padding_height = padding_height,
       } {
   if (input_channels <= 0 || input_height <= 0 || input_width <= 0 || kernel_height <= 0 ||
       kernel_width <= 0 || stride_height <= 0 || stride_width <= 0 || batch_size <= 0) {
@@ -32,8 +32,13 @@ MaxPool2D::MaxPool2D(core::vulkan::VulkanContext* context, int input_channels, i
     return;
   }
 
-  uniform_data_.output_width = (input_width - kernel_width) / stride_width + 1;
-  uniform_data_.output_height = (input_height - kernel_height) / stride_height + 1;
+  if (padding_height < 0 || padding_width < 0) {
+    std::cerr << "MaxPool2D padding must not be negative\n";
+    return;
+  }
+  uniform_data_.output_width = (input_width + 2 * padding_width - kernel_width) / stride_width + 1;
+  uniform_data_.output_height =
+      (input_height + 2 * padding_height - kernel_height) / stride_height + 1;
   if (uniform_data_.output_height <= 0 || uniform_data_.output_width <= 0) {
     std::cerr << "MaxPool2D kernel must fit within the input\n";
     return;
