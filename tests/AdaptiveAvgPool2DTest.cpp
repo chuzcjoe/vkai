@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "Softmax.h"
+#include "AdaptiveAvgPool2D.h"
 #include "VulkanBuffer.h"
 #include "VulkanCommandBuffer.h"
 #include "VulkanContext.h"
@@ -25,17 +25,19 @@ bool ReadFloats(const std::filesystem::path& path, std::vector<float>* values) {
          static_cast<bool>(stream.read(reinterpret_cast<char*>(values->data()), bytes));
 }
 
-void ExpectChannelSoftmaxMatchesPyTorch(const std::string& name) {
-  const auto directory = std::filesystem::path(VKAI_SOURCE_DIR) / "python/pspnet/test_data/softmax";
+void ExpectAdaptiveAverageMatchesPyTorch(const std::string& name) {
+  const auto directory =
+      std::filesystem::path(VKAI_SOURCE_DIR) / "python/pspnet/test_data/adaptive_avg_pool";
   std::ifstream shape_stream(directory / (name + ".txt"));
-  int batch, channels, height, width;
-  ASSERT_TRUE(shape_stream >> batch >> channels >> height >> width);
+  int batch, channels, input_height, input_width, output_height, output_width;
+  ASSERT_TRUE(shape_stream >> batch >> channels >> input_height >> input_width >> output_height >>
+              output_width);
   std::vector<float> input;
   std::vector<float> expected;
   ASSERT_TRUE(ReadFloats(directory / (name + "_input.bin"), &input));
   ASSERT_TRUE(ReadFloats(directory / (name + "_output.bin"), &expected));
-  ASSERT_EQ(input.size(), static_cast<size_t>(batch * channels * height * width));
-  ASSERT_EQ(expected.size(), input.size());
+  ASSERT_EQ(input.size(), static_cast<size_t>(batch * channels * input_height * input_width));
+  ASSERT_EQ(expected.size(), static_cast<size_t>(batch * channels * output_height * output_width));
 
   constexpr auto kMemory =
       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
@@ -48,29 +50,20 @@ void ExpectChannelSoftmaxMatchesPyTorch(const std::string& name) {
                                            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kMemory);
   input_buffer.MapData(
       [&input](void* data) { std::memcpy(data, input.data(), input.size() * sizeof(float)); });
-  vkai::Softmax softmax(&context, channels, height, width, batch, vkai::SoftmaxMode::kChannelNCHW);
-  softmax.Init();
+  vkai::AdaptiveAvgPool2D pool(&context, channels, input_height, input_width, output_height,
+                               output_width, batch);
+  ASSERT_EQ(pool.OutputHeight(), output_height);
+  ASSERT_EQ(pool.OutputWidth(), output_width);
+  pool.Init();
   auto command_buffer = core::vulkan::VulkanCommandBuffer::BeginOneTimeCommands(&context);
-  softmax.Execute(command_buffer.buffer(), input_buffer, output_buffer);
+  pool.Execute(command_buffer.buffer(), input_buffer, output_buffer);
   command_buffer.EndOneTimeCommands();
+
   std::vector<float> actual(expected.size());
   output_buffer.MapData(
       [&actual](void* data) { std::memcpy(actual.data(), data, actual.size() * sizeof(float)); });
-  for (size_t index = 0; index < expected.size(); ++index) {
-    EXPECT_NEAR(actual[index], expected[index], 2e-6F + 2e-6F * std::abs(expected[index]))
-        << "index " << index;
-  }
-  for (int n = 0; n < batch; ++n) {
-    for (int y = 0; y < height; ++y) {
-      for (int x = 0; x < width; ++x) {
-        float probability_sum = 0.0F;
-        for (int c = 0; c < channels; ++c) {
-          const size_t index = ((n * channels + c) * height + y) * width + x;
-          probability_sum += actual[index];
-        }
-        EXPECT_NEAR(probability_sum, 1.0F, 2e-6F);
-      }
-    }
+  for (size_t i = 0; i < expected.size(); ++i) {
+    EXPECT_NEAR(actual[i], expected[i], 1e-6F + 1e-6F * std::abs(expected[i])) << "index " << i;
   }
 }
 
@@ -79,12 +72,15 @@ void ExpectChannelSoftmaxMatchesPyTorch(const std::string& name) {
 namespace vkai {
 namespace test {
 
-TEST(PSPNetSoftmaxTest, MatchesFinalPSPNetChannelSoftmax) {
-  ExpectChannelSoftmaxMatchesPyTorch("pspnet_final");
+TEST(AdaptiveAvgPool2DTest, MatchesAllPyramidPoolingScales) {
+  ExpectAdaptiveAverageMatchesPyTorch("pspnet_scale_1");
+  ExpectAdaptiveAverageMatchesPyTorch("pspnet_scale_2");
+  ExpectAdaptiveAverageMatchesPyTorch("pspnet_scale_3");
+  ExpectAdaptiveAverageMatchesPyTorch("pspnet_scale_6");
 }
 
-TEST(PSPNetSoftmaxTest, MatchesBatchedExtremeChannelSoftmax) {
-  ExpectChannelSoftmaxMatchesPyTorch("batched_extreme");
+TEST(AdaptiveAvgPool2DTest, MatchesBatchedNonDivisibleRegions) {
+  ExpectAdaptiveAverageMatchesPyTorch("batched");
 }
 
 }  // namespace test

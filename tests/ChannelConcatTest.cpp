@@ -82,11 +82,11 @@ void ExpectChannelConcatMatchesPyTorch(const std::string& name) {
 namespace vkai {
 namespace test {
 
-TEST(PSPNetChannelConcatTest, MatchesFiveInputPyramidPoolingConcat) {
+TEST(ChannelConcatTest, MatchesFiveInputPyramidPoolingConcat) {
   ExpectChannelConcatMatchesPyTorch("pspnet_ppm");
 }
 
-TEST(PSPNetChannelConcatTest, MatchesTwoInputBatchedConcat) {
+TEST(ChannelConcatTest, MatchesTwoInputBatchedConcat) {
   ExpectChannelConcatMatchesPyTorch("batched_two_inputs");
 }
 

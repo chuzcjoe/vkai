@@ -70,8 +70,8 @@ void CheckReference(const std::string& name) {
   }
 }
 
-TEST(BatchNorm2DTest, MatchesPSPNetBeforeRelu) { CheckReference("pspnet_bn2"); }
-TEST(BatchNorm2DTest, MatchesPSPNetBeforeResidualAdd) { CheckReference("pspnet_bn3"); }
+TEST(BatchNorm2DTest, MatchesReferenceBeforeRelu) { CheckReference("pspnet_bn2"); }
+TEST(BatchNorm2DTest, MatchesReferenceBeforeResidualAdd) { CheckReference("pspnet_bn3"); }
 TEST(BatchNorm2DTest, BatchedNonDefaultEpsilonAndZeroVariance) { CheckReference("batched"); }
 TEST(BatchNorm2DTest, SupportsNonAffineNormalization) { CheckReference("no_affine"); }
 

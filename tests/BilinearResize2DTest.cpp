@@ -71,18 +71,18 @@ void ExpectResizeMatchesPyTorch(const std::string& name) {
 namespace vkai {
 namespace test {
 
-TEST(PSPNetBilinearResize2DTest, MatchesAllPyramidPoolingUpsamples) {
+TEST(BilinearResize2DTest, MatchesAllPyramidPoolingUpsamples) {
   ExpectResizeMatchesPyTorch("ppm_scale_1");
   ExpectResizeMatchesPyTorch("ppm_scale_2");
   ExpectResizeMatchesPyTorch("ppm_scale_3");
   ExpectResizeMatchesPyTorch("ppm_scale_6");
 }
 
-TEST(PSPNetBilinearResize2DTest, MatchesFinalLogitsUpsample) {
+TEST(BilinearResize2DTest, MatchesFinalLogitsUpsample) {
   ExpectResizeMatchesPyTorch("final_logits");
 }
 
-TEST(PSPNetBilinearResize2DTest, MatchesBatchedNonSquareResize) {
+TEST(BilinearResize2DTest, MatchesBatchedNonSquareResize) {
   ExpectResizeMatchesPyTorch("batched_non_square");
 }
 
