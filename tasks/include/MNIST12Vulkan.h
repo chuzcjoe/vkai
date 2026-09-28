@@ -3,13 +3,13 @@
 #include <memory>
 #include <string>
 
-#include "Add.h"
-#include "Conv2D.h"
-#include "Linear.h"
-#include "MaxPool2D.h"
-#include "Relu.h"
 #include "VulkanBuffer.h"
-#include "WeightsLoader.h"
+#include "layers/Add.h"
+#include "layers/Conv2D.h"
+#include "layers/Linear.h"
+#include "layers/MaxPool2D.h"
+#include "layers/Relu.h"
+#include "utils/WeightsLoader.h"
 
 namespace vkai {
 

@@ -8,11 +8,11 @@
 #include <string>
 #include <vector>
 
-#include "Linear.h"
 #include "VulkanBuffer.h"
 #include "VulkanCommandBuffer.h"
 #include "VulkanContext.h"
-#include "WeightsLoader.h"
+#include "layers/Linear.h"
+#include "utils/WeightsLoader.h"
 
 namespace {
 

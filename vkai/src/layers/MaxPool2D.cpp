@@ -1,4 +1,4 @@
-#include "MaxPool2D.h"
+#include "layers/MaxPool2D.h"
 
 #include <cstring>
 #include <filesystem>

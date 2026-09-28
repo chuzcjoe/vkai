@@ -8,7 +8,7 @@
 #include <utility>
 #include <vector>
 
-#include "Synchronization.h"
+#include "utils/Synchronization.h"
 
 namespace vkai {
 namespace {

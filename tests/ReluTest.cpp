@@ -6,10 +6,10 @@
 #include <iostream>
 #include <vector>
 
-#include "Relu.h"
 #include "VulkanBuffer.h"
 #include "VulkanCommandBuffer.h"
 #include "VulkanContext.h"
+#include "layers/Relu.h"
 
 namespace {
 

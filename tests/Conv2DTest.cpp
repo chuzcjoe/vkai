@@ -7,10 +7,10 @@
 #include <iostream>
 #include <vector>
 
-#include "Conv2D.h"
 #include "VulkanBuffer.h"
 #include "VulkanCommandBuffer.h"
 #include "VulkanContext.h"
+#include "layers/Conv2D.h"
 
 namespace {
 

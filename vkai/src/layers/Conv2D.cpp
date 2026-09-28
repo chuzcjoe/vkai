@@ -1,10 +1,10 @@
-#include "Conv2D.h"
+#include "layers/Conv2D.h"
 
 #include <cstring>
 #include <filesystem>
 #include <iostream>
 
-#include "Common.h"
+#include "utils/Common.h"
 
 namespace vkai {
 

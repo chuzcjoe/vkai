@@ -1,14 +1,15 @@
 #pragma once
 
-#include "Layer.h"
+#include "layers/Layer.h"
 
 namespace vkai {
 
-// Adaptive average pooling for contiguous float32 NCHW tensors.
-class AdaptiveAvgPool2D : public Layer {
+// Max pooling over NCHW tensors with symmetric zero-padding.
+class MaxPool2D : public Layer {
  public:
-  AdaptiveAvgPool2D(core::vulkan::VulkanContext* context, int input_channels, int input_height,
-                    int input_width, int output_height, int output_width, int batch_size = 1);
+  MaxPool2D(core::vulkan::VulkanContext* context, int input_channels, int input_height,
+            int input_width, int kernel_height, int kernel_width, int stride_height,
+            int stride_width, int batch_size = 1, int padding_height = 0, int padding_width = 0);
 
   void Init() override;
 
@@ -21,7 +22,9 @@ class AdaptiveAvgPool2D : public Layer {
 
  protected:
   std::vector<core::vulkan::BindingInfo> GetBindingInfo() const override;
+
   const std::vector<uint32_t>& LoadShaderCode() const override;
+
   const std::string GetPipelineCache() const override;
 
  private:
@@ -30,15 +33,22 @@ class AdaptiveAvgPool2D : public Layer {
     int input_height;
     int input_channels;
     int batch_size;
+
     int output_width;
     int output_height;
-    int reserved_0;
-    int reserved_1;
-  } uniform_data_;
+    int kernel_width;
+    int kernel_height;
 
-  static_assert(sizeof(UniformData) == 32);
+    int stride_width;
+    int stride_height;
+    int padding_width;
+    int padding_height;
+  };
+
+  static_assert(sizeof(UniformData) == 48);
 
   core::vulkan::VulkanBuffer uniform_buffer_;
+  UniformData uniform_data_;
   bool valid_ = false;
 };
 

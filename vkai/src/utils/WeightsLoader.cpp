@@ -1,11 +1,11 @@
-#include "WeightsLoader.h"
+#include "utils/WeightsLoader.h"
 
 #include <limits>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "MappedFile.h"
+#include "utils/MappedFile.h"
 #include "model_generated.h"
 
 namespace vkai {

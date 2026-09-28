@@ -7,8 +7,8 @@
 #include <string>
 #include <vector>
 
-#include "WeightsLoader.h"
 #include "model_generated.h"
+#include "utils/WeightsLoader.h"
 
 namespace {
 

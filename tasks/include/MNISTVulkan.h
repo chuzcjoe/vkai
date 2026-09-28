@@ -3,13 +3,13 @@
 #include <memory>
 #include <string>
 
-#include "Layer.h"
-#include "Linear.h"
-#include "Relu.h"
-#include "Softmax.h"
 #include "VulkanBuffer.h"
 #include "VulkanCompute.h"
-#include "WeightsLoader.h"
+#include "layers/Layer.h"
+#include "layers/Linear.h"
+#include "layers/Relu.h"
+#include "layers/Softmax.h"
+#include "utils/WeightsLoader.h"
 
 namespace vkai {
 

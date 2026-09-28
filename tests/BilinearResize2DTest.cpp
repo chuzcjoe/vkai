@@ -7,10 +7,10 @@
 #include <string>
 #include <vector>
 
-#include "BilinearResize2D.h"
 #include "VulkanBuffer.h"
 #include "VulkanCommandBuffer.h"
 #include "VulkanContext.h"
+#include "layers/BilinearResize2D.h"
 
 namespace {
 

@@ -3,7 +3,7 @@
 #include <iostream>
 #include <utility>
 
-#include "Synchronization.h"
+#include "utils/Synchronization.h"
 
 namespace vkai {
 namespace {

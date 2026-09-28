@@ -9,10 +9,10 @@
 #include <string>
 #include <vector>
 
-#include "Softmax.h"
 #include "VulkanBuffer.h"
 #include "VulkanCommandBuffer.h"
 #include "VulkanContext.h"
+#include "layers/Softmax.h"
 
 namespace {
 

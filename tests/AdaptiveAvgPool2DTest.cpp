@@ -7,10 +7,10 @@
 #include <string>
 #include <vector>
 
-#include "AdaptiveAvgPool2D.h"
 #include "VulkanBuffer.h"
 #include "VulkanCommandBuffer.h"
 #include "VulkanContext.h"
+#include "layers/AdaptiveAvgPool2D.h"
 
 namespace {
 

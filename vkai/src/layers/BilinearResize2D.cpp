@@ -1,4 +1,4 @@
-#include "AdaptiveAvgPool2D.h"
+#include "layers/BilinearResize2D.h"
 
 #include <cstring>
 #include <filesystem>
@@ -6,9 +6,9 @@
 
 namespace vkai {
 
-AdaptiveAvgPool2D::AdaptiveAvgPool2D(core::vulkan::VulkanContext* context, int input_channels,
-                                     int input_height, int input_width, int output_height,
-                                     int output_width, int batch_size)
+BilinearResize2D::BilinearResize2D(core::vulkan::VulkanContext* context, int input_channels,
+                                   int input_height, int input_width, int output_height,
+                                   int output_width, int batch_size)
     : Layer(context),
       uniform_data_{.input_width = input_width,
                     .input_height = input_height,
@@ -22,7 +22,7 @@ AdaptiveAvgPool2D::AdaptiveAvgPool2D(core::vulkan::VulkanContext* context, int i
                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) {
   if (input_channels <= 0 || input_height <= 0 || input_width <= 0 || output_height <= 0 ||
       output_width <= 0 || batch_size <= 0) {
-    std::cerr << "AdaptiveAvgPool2D dimensions must be positive\n";
+    std::cerr << "BilinearResize2D dimensions must be positive\n";
     return;
   }
   uniform_buffer_.MapData(
@@ -30,9 +30,9 @@ AdaptiveAvgPool2D::AdaptiveAvgPool2D(core::vulkan::VulkanContext* context, int i
   valid_ = true;
 }
 
-void AdaptiveAvgPool2D::Init() {
+void BilinearResize2D::Init() {
   if (!valid_) {
-    std::cerr << "Cannot initialize an invalid AdaptiveAvgPool2D\n";
+    std::cerr << "Cannot initialize an invalid BilinearResize2D\n";
     return;
   }
   VulkanCompute::Init();
@@ -42,11 +42,11 @@ void AdaptiveAvgPool2D::Init() {
   if (!cache.empty() && !std::filesystem::exists(cache)) SavePipelineCache(cache);
 }
 
-void AdaptiveAvgPool2D::Execute(const VkCommandBuffer& command_buffer,
-                                const core::vulkan::VulkanBuffer& input_buffer,
-                                core::vulkan::VulkanBuffer& output_buffer) {
+void BilinearResize2D::Execute(const VkCommandBuffer& command_buffer,
+                               const core::vulkan::VulkanBuffer& input_buffer,
+                               core::vulkan::VulkanBuffer& output_buffer) {
   if (!valid_ || pipeline == VK_NULL_HANDLE) {
-    std::cerr << "Cannot run an invalid or uninitialized AdaptiveAvgPool2D\n";
+    std::cerr << "Cannot run an invalid or uninitialized BilinearResize2D\n";
     return;
   }
   const VkDeviceSize input_size = static_cast<VkDeviceSize>(uniform_data_.batch_size) *
@@ -56,7 +56,7 @@ void AdaptiveAvgPool2D::Execute(const VkCommandBuffer& command_buffer,
                                    uniform_data_.input_channels * uniform_data_.output_height *
                                    uniform_data_.output_width * sizeof(float);
   if (input_buffer.Size() < input_size || output_buffer.Size() < output_size) {
-    std::cerr << "AdaptiveAvgPool2D input or output buffer is too small\n";
+    std::cerr << "BilinearResize2D input or output buffer is too small\n";
     return;
   }
   UpdateStorageBufferDescriptors(1, 2, input_buffer, output_buffer);
@@ -70,22 +70,22 @@ void AdaptiveAvgPool2D::Execute(const VkCommandBuffer& command_buffer,
   vkCmdDispatch(command_buffer, (output_elements + kLocalSize - 1) / kLocalSize, 1, 1);
 }
 
-std::vector<core::vulkan::BindingInfo> AdaptiveAvgPool2D::GetBindingInfo() const {
+std::vector<core::vulkan::BindingInfo> BilinearResize2D::GetBindingInfo() const {
   return {{0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT},
           {1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT},
           {2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT}};
 }
 
-const std::vector<uint32_t>& AdaptiveAvgPool2D::LoadShaderCode() const {
+const std::vector<uint32_t>& BilinearResize2D::LoadShaderCode() const {
   static const std::vector<uint32_t> shader_code =
-#include "AdaptiveAvgPool2D.comp.spv"
+#include "BilinearResize2D.comp.spv"
       ;
   return shader_code;
 }
 
-const std::string AdaptiveAvgPool2D::GetPipelineCache() const {
+const std::string BilinearResize2D::GetPipelineCache() const {
   const std::string cache_dir = PIPELINE_CACHE_DIR;
-  return cache_dir.empty() ? "" : cache_dir + "/adaptive_avg_pool_2d.cache";
+  return cache_dir.empty() ? "" : cache_dir + "/bilinear_resize_2d.cache";
 }
 
 }  // namespace vkai

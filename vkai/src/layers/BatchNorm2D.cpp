@@ -1,4 +1,4 @@
-#include "BatchNorm2D.h"
+#include "layers/BatchNorm2D.h"
 
 #include <cmath>
 #include <cstring>

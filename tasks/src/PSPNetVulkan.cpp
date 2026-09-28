@@ -8,17 +8,17 @@
 #include <utility>
 #include <vector>
 
-#include "AdaptiveAvgPool2D.h"
-#include "Add.h"
-#include "BatchNorm2D.h"
-#include "BilinearResize2D.h"
-#include "ChannelConcat.h"
-#include "Conv2D.h"
-#include "MaxPool2D.h"
-#include "Relu.h"
-#include "Softmax.h"
-#include "Synchronization.h"
-#include "WeightsLoader.h"
+#include "layers/AdaptiveAvgPool2D.h"
+#include "layers/Add.h"
+#include "layers/BatchNorm2D.h"
+#include "layers/BilinearResize2D.h"
+#include "layers/ChannelConcat.h"
+#include "layers/Conv2D.h"
+#include "layers/MaxPool2D.h"
+#include "layers/Relu.h"
+#include "layers/Softmax.h"
+#include "utils/Synchronization.h"
+#include "utils/WeightsLoader.h"
 
 namespace vkai {
 namespace {

@@ -1,10 +1,10 @@
-#include "Linear.h"
+#include "layers/Linear.h"
 
 #include <cstring>
 #include <filesystem>
 #include <iostream>
 
-#include "Common.h"
+#include "utils/Common.h"
 
 namespace vkai {
 

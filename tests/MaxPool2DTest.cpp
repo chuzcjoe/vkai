@@ -8,10 +8,10 @@
 #include <string>
 #include <vector>
 
-#include "MaxPool2D.h"
 #include "VulkanBuffer.h"
 #include "VulkanCommandBuffer.h"
 #include "VulkanContext.h"
+#include "layers/MaxPool2D.h"
 
 namespace {
 

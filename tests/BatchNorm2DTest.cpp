@@ -8,8 +8,8 @@
 #include <stdexcept>
 #include <vector>
 
-#include "BatchNorm2D.h"
 #include "VulkanContext.h"
+#include "layers/BatchNorm2D.h"
 
 namespace vkai {
 namespace test {

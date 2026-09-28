@@ -8,10 +8,10 @@
 #include <string>
 #include <vector>
 
-#include "ChannelConcat.h"
 #include "VulkanBuffer.h"
 #include "VulkanCommandBuffer.h"
 #include "VulkanContext.h"
+#include "layers/ChannelConcat.h"
 
 namespace {
 
