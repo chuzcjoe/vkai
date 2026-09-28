@@ -4,7 +4,7 @@
 #include <filesystem>
 #include <iostream>
 
-#include "utils/Common.h"
+#include "utils/BufferUtils.h"
 
 namespace vkai {
 
@@ -15,12 +15,11 @@ Conv2D::Conv2D(core::vulkan::VulkanContext* context, const std::vector<float>& w
                const std::vector<float>& bias, int dilation_height, int dilation_width)
     : Layer(context),
       uniform_buffer_(context, sizeof(UniformData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-      weights_buffer_(context, BufferSize(weights), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+                      kHostVisibleMemory),
+      weights_buffer_(context, vkai::GetBufferSize(weights), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                      kHostVisibleMemory),
       bias_buffer_(context, static_cast<VkDeviceSize>(output_channels) * sizeof(float),
-                   VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+                   VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory),
       uniform_data_{
           .input_width = input_width,
           .input_height = input_height,

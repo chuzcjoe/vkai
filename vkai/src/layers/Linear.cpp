@@ -4,7 +4,7 @@
 #include <filesystem>
 #include <iostream>
 
-#include "utils/Common.h"
+#include "utils/BufferUtils.h"
 
 namespace vkai {
 
@@ -12,11 +12,11 @@ Linear::Linear(core::vulkan::VulkanContext* context, const std::vector<float>& w
                const std::vector<float>& bias, int input_size, int output_size, int batch_size)
     : Layer(context),
       uniform_buffer_(context, sizeof(UniformData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-      weights_buffer_(context, BufferSize(weights), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-      bias_buffer_(context, BufferSize(bias), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+                      kHostVisibleMemory),
+      weights_buffer_(context, vkai::GetBufferSize(weights), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                      kHostVisibleMemory),
+      bias_buffer_(context, vkai::GetBufferSize(bias), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                   kHostVisibleMemory),
       uniform_data_{
           .input_size = input_size, .output_size = output_size, .batch_size = batch_size} {
   if (input_size <= 0 || output_size <= 0 || batch_size <= 0) {

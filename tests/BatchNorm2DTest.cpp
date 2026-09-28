@@ -10,6 +10,7 @@
 
 #include "VulkanContext.h"
 #include "layers/BatchNorm2D.h"
+#include "utils/BufferUtils.h"
 
 namespace vkai {
 namespace test {
@@ -49,12 +50,12 @@ void CheckReference(const std::string& name) {
   core::vulkan::VulkanContext context(false, core::vulkan::QueueFamilyType::Compute,
                                       VK_NULL_HANDLE);
   context.Init();
-  constexpr auto kMemory =
-      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
   core::vulkan::VulkanBuffer input_buffer(&context, input.size() * sizeof(float),
-                                          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kMemory);
+                                          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                          vkai::kHostVisibleMemory);
   core::vulkan::VulkanBuffer output_buffer(&context, input.size() * sizeof(float),
-                                           VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kMemory);
+                                           VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                           vkai::kHostVisibleMemory);
   input_buffer.MapData(
       [&](void* data) { std::memcpy(data, input.data(), input.size() * sizeof(float)); });
   BatchNorm2D bn(&context, c, h * w, n, eps, mean, variance, weight, bias);

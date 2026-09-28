@@ -6,6 +6,8 @@
 #include <limits>
 #include <stdexcept>
 
+#include "utils/BufferUtils.h"
+
 namespace vkai {
 namespace {
 
@@ -46,11 +48,9 @@ BatchNorm2D::BatchNorm2D(core::vulkan::VulkanContext* context, int channels,
     : Layer(ValidateParameters(context, channels, elements_per_channel, batch_size, eps,
                                running_mean, running_var, weight, bias)),
       uniform_buffer_(context, sizeof(UniformData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-      parameters_buffer_(
-          context, static_cast<VkDeviceSize>(channels) * 2 * sizeof(float),
-          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) {
+                      kHostVisibleMemory),
+      parameters_buffer_(context, static_cast<VkDeviceSize>(channels) * 2 * sizeof(float),
+                         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory) {
   // The base class does not initialize descriptor handles until Init().
   descriptor_pool_ = VK_NULL_HANDLE;
   descriptor_set_layout_ = VK_NULL_HANDLE;

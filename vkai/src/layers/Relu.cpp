@@ -4,12 +4,14 @@
 #include <filesystem>
 #include <iostream>
 
+#include "utils/BufferUtils.h"
+
 namespace vkai {
 
 Relu::Relu(core::vulkan::VulkanContext* context, int element_count)
     : Layer(context),
       uniform_buffer_(context, sizeof(UniformData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+                      kHostVisibleMemory),
       uniform_data_{.element_count = element_count} {
   if (element_count <= 0) {
     std::cerr << "ReLU element count must be positive\n";

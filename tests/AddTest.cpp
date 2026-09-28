@@ -11,6 +11,7 @@
 #include "VulkanCommandBuffer.h"
 #include "VulkanContext.h"
 #include "layers/Add.h"
+#include "utils/BufferUtils.h"
 
 namespace {
 
@@ -39,8 +40,6 @@ void ExpectMNIST12AddMatchesReference(const std::filesystem::path& input_path,
                                       const std::filesystem::path& addend_path,
                                       const std::filesystem::path& output_path, int channels,
                                       int elements_per_channel) {
-  constexpr VkMemoryPropertyFlags kHostVisibleMemory =
-      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
   std::vector<float> input;
   std::vector<float> addend;
   std::vector<float> reference;
@@ -55,11 +54,14 @@ void ExpectMNIST12AddMatchesReference(const std::filesystem::path& input_path,
                                       VK_NULL_HANDLE);
   context.Init();
   core::vulkan::VulkanBuffer input_buffer(&context, input.size() * sizeof(float),
-                                          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
+                                          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                          vkai::kHostVisibleMemory);
   core::vulkan::VulkanBuffer addend_buffer(&context, addend.size() * sizeof(float),
-                                           VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
+                                           VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                           vkai::kHostVisibleMemory);
   core::vulkan::VulkanBuffer output_buffer(&context, reference.size() * sizeof(float),
-                                           VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
+                                           VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                           vkai::kHostVisibleMemory);
   input_buffer.MapData(
       [&input](void* data) { std::memcpy(data, input.data(), input.size() * sizeof(float)); });
   addend_buffer.MapData(
@@ -115,17 +117,18 @@ TEST(AddTest, MatchesElementwiseResidualAddReference) {
   constexpr int kElementsPerChannel = 6 * 8;
   ASSERT_EQ(input.size(), static_cast<size_t>(kChannels * kElementsPerChannel));
 
-  constexpr VkMemoryPropertyFlags kHostVisibleMemory =
-      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
   core::vulkan::VulkanContext context(false, core::vulkan::QueueFamilyType::Compute,
                                       VK_NULL_HANDLE);
   context.Init();
   core::vulkan::VulkanBuffer input_buffer(&context, input.size() * sizeof(float),
-                                          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
+                                          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                          vkai::kHostVisibleMemory);
   core::vulkan::VulkanBuffer addend_buffer(&context, addend.size() * sizeof(float),
-                                           VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
+                                           VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                           vkai::kHostVisibleMemory);
   core::vulkan::VulkanBuffer output_buffer(&context, reference.size() * sizeof(float),
-                                           VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
+                                           VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                           vkai::kHostVisibleMemory);
   input_buffer.MapData(
       [&input](void* data) { std::memcpy(data, input.data(), input.size() * sizeof(float)); });
   addend_buffer.MapData(

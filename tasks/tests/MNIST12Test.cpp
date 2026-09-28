@@ -11,6 +11,7 @@
 #include "VulkanBuffer.h"
 #include "VulkanCommandBuffer.h"
 #include "VulkanContext.h"
+#include "utils/BufferUtils.h"
 
 namespace {
 
@@ -41,8 +42,6 @@ namespace vkai {
 namespace test {
 
 TEST(MNIST12Test, MatchesPyTorchLogits) {
-  constexpr VkMemoryPropertyFlags kHostVisibleMemory =
-      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
   constexpr size_t kLargestIntermediateElements = 8U * 28U * 28U;
   const std::filesystem::path mnist12_dir =
       std::filesystem::path(VKAI_SOURCE_DIR) / "python/mnist12_cnn";

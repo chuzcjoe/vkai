@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "utils/BufferUtils.h"
 #include "utils/Synchronization.h"
 
 namespace vkai {
@@ -28,9 +29,6 @@ constexpr int kPool1Width = 14;
 constexpr int kPool2Height = 4;
 constexpr int kPool2Width = 4;
 constexpr int kOutputClasses = 10;
-constexpr VkMemoryPropertyFlags kHostVisibleMemory =
-    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-
 bool HasShape(const WeightTensor* tensor, std::initializer_list<uint32_t> expected_shape) {
   const std::vector<uint32_t> expected(expected_shape);
   return tensor != nullptr && tensor->shape == expected &&

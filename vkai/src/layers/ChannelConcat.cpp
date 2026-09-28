@@ -4,6 +4,8 @@
 #include <filesystem>
 #include <iostream>
 
+#include "utils/BufferUtils.h"
+
 namespace vkai {
 
 ChannelConcat::ChannelConcat(core::vulkan::VulkanContext* context,
@@ -23,7 +25,7 @@ ChannelConcat::ChannelConcat(core::vulkan::VulkanContext* context,
                     .reserved_0 = 0,
                     .reserved_1 = 0},
       uniform_buffer_(context, sizeof(UniformData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) {
+                      kHostVisibleMemory) {
   if (input_channels.size() < 2 || input_channels.size() > kMaxInputs || input_height <= 0 ||
       input_width <= 0 || batch_size <= 0) {
     std::cerr << "ChannelConcat requires 2 to 5 inputs and positive dimensions\n";

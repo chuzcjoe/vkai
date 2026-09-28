@@ -4,6 +4,8 @@
 #include <filesystem>
 #include <iostream>
 
+#include "utils/BufferUtils.h"
+
 namespace vkai {
 
 AdaptiveAvgPool2D::AdaptiveAvgPool2D(core::vulkan::VulkanContext* context, int input_channels,
@@ -19,7 +21,7 @@ AdaptiveAvgPool2D::AdaptiveAvgPool2D(core::vulkan::VulkanContext* context, int i
                     .reserved_0 = 0,
                     .reserved_1 = 0},
       uniform_buffer_(context, sizeof(UniformData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) {
+                      kHostVisibleMemory) {
   if (input_channels <= 0 || input_height <= 0 || input_width <= 0 || output_height <= 0 ||
       output_width <= 0 || batch_size <= 0) {
     std::cerr << "AdaptiveAvgPool2D dimensions must be positive\n";

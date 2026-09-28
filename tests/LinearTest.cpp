@@ -12,6 +12,7 @@
 #include "VulkanCommandBuffer.h"
 #include "VulkanContext.h"
 #include "layers/Linear.h"
+#include "utils/BufferUtils.h"
 #include "utils/WeightsLoader.h"
 
 namespace {
@@ -42,18 +43,16 @@ bool ReadFloatBinary(const std::filesystem::path& path, std::vector<float>& valu
 std::vector<float> RunLinear(const std::vector<float>& input, const std::vector<float>& weights,
                              const std::vector<float>& bias, int input_size, int output_size,
                              int batch_size) {
-  constexpr VkMemoryPropertyFlags kHostVisibleMemory =
-      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-
   core::vulkan::VulkanContext context(false, core::vulkan::QueueFamilyType::Compute,
                                       VK_NULL_HANDLE);
   context.Init();
 
   core::vulkan::VulkanBuffer input_buffer(&context, input.size() * sizeof(float),
-                                          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
+                                          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                          vkai::kHostVisibleMemory);
   core::vulkan::VulkanBuffer output_buffer(
       &context, static_cast<VkDeviceSize>(output_size * batch_size) * sizeof(float),
-      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
+      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, vkai::kHostVisibleMemory);
 
   input_buffer.MapData(
       [&input](void* data) { std::memcpy(data, input.data(), input.size() * sizeof(float)); });

@@ -4,6 +4,8 @@
 #include <filesystem>
 #include <iostream>
 
+#include "utils/BufferUtils.h"
+
 namespace vkai {
 
 MaxPool2D::MaxPool2D(core::vulkan::VulkanContext* context, int input_channels, int input_height,
@@ -11,7 +13,7 @@ MaxPool2D::MaxPool2D(core::vulkan::VulkanContext* context, int input_channels, i
                      int stride_width, int batch_size, int padding_height, int padding_width)
     : Layer(context),
       uniform_buffer_(context, sizeof(UniformData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+                      kHostVisibleMemory),
       uniform_data_{
           .input_width = input_width,
           .input_height = input_height,

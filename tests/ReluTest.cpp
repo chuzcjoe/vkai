@@ -10,6 +10,7 @@
 #include "VulkanCommandBuffer.h"
 #include "VulkanContext.h"
 #include "layers/Relu.h"
+#include "utils/BufferUtils.h"
 
 namespace {
 
@@ -42,9 +43,6 @@ namespace vkai {
 namespace test {
 
 TEST(ReluTest, MatchesPyTorchReference) {
-  constexpr VkMemoryPropertyFlags kHostVisibleMemory =
-      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-
   const std::filesystem::path data_dir =
       std::filesystem::path(VKAI_SOURCE_DIR) / "python/mnist/test_data";
   std::vector<float> input;
@@ -59,9 +57,11 @@ TEST(ReluTest, MatchesPyTorchReference) {
   context.Init();
 
   core::vulkan::VulkanBuffer input_buffer(&context, input.size() * sizeof(float),
-                                          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
+                                          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                          vkai::kHostVisibleMemory);
   core::vulkan::VulkanBuffer output_buffer(&context, reference.size() * sizeof(float),
-                                           VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
+                                           VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                           vkai::kHostVisibleMemory);
 
   input_buffer.MapData(
       [&input](void* data) { std::memcpy(data, input.data(), input.size() * sizeof(float)); });

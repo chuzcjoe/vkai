@@ -13,6 +13,7 @@
 #include "VulkanCommandBuffer.h"
 #include "VulkanContext.h"
 #include "layers/Softmax.h"
+#include "utils/BufferUtils.h"
 
 namespace {
 
@@ -51,15 +52,15 @@ void ExpectChannelSoftmaxMatchesReference(const std::string& name) {
   ASSERT_EQ(input.size(), static_cast<size_t>(batch * channels * height * width));
   ASSERT_EQ(expected.size(), input.size());
 
-  constexpr auto kMemory =
-      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
   core::vulkan::VulkanContext context(false, core::vulkan::QueueFamilyType::Compute,
                                       VK_NULL_HANDLE);
   context.Init();
   core::vulkan::VulkanBuffer input_buffer(&context, input.size() * sizeof(float),
-                                          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kMemory);
+                                          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                          vkai::kHostVisibleMemory);
   core::vulkan::VulkanBuffer output_buffer(&context, expected.size() * sizeof(float),
-                                           VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kMemory);
+                                           VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                           vkai::kHostVisibleMemory);
   input_buffer.MapData(
       [&input](void* data) { std::memcpy(data, input.data(), input.size() * sizeof(float)); });
   vkai::Softmax softmax(&context, channels, height, width, batch, vkai::SoftmaxMode::kChannelNCHW);
@@ -96,9 +97,6 @@ namespace test {
 TEST(SoftmaxTest, MatchesPyTorchReference) {
   constexpr int kInputSize = 10;
   constexpr int kBatchSize = 1;
-  constexpr VkMemoryPropertyFlags kHostVisibleMemory =
-      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-
   const std::filesystem::path data_dir =
       std::filesystem::path(VKAI_SOURCE_DIR) / "python/mnist/test_data";
   std::vector<float> input;
@@ -113,9 +111,11 @@ TEST(SoftmaxTest, MatchesPyTorchReference) {
   context.Init();
 
   core::vulkan::VulkanBuffer input_buffer(&context, input.size() * sizeof(float),
-                                          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
+                                          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                          vkai::kHostVisibleMemory);
   core::vulkan::VulkanBuffer output_buffer(&context, reference.size() * sizeof(float),
-                                           VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
+                                           VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                           vkai::kHostVisibleMemory);
 
   input_buffer.MapData(
       [&input](void* data) { std::memcpy(data, input.data(), input.size() * sizeof(float)); });

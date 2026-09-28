@@ -11,6 +11,7 @@
 #include "VulkanCommandBuffer.h"
 #include "VulkanContext.h"
 #include "layers/Conv2D.h"
+#include "utils/BufferUtils.h"
 
 namespace {
 
@@ -44,8 +45,6 @@ void ExpectConvMatchesReference(const std::filesystem::path& input_path,
                                 int kernel_height, int kernel_width, int padding_height,
                                 int padding_width, int dilation_height, int dilation_width,
                                 const std::filesystem::path* bias_path = nullptr) {
-  constexpr VkMemoryPropertyFlags kHostVisibleMemory =
-      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
   std::vector<float> input;
   std::vector<float> weights;
   std::vector<float> bias;
@@ -70,9 +69,11 @@ void ExpectConvMatchesReference(const std::filesystem::path& input_path,
                                       VK_NULL_HANDLE);
   context.Init();
   core::vulkan::VulkanBuffer input_buffer(&context, input.size() * sizeof(float),
-                                          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
+                                          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                          vkai::kHostVisibleMemory);
   core::vulkan::VulkanBuffer output_buffer(&context, reference.size() * sizeof(float),
-                                           VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
+                                           VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                           vkai::kHostVisibleMemory);
   input_buffer.MapData(
       [&input](void* data) { std::memcpy(data, input.data(), input.size() * sizeof(float)); });
 
@@ -113,9 +114,6 @@ TEST(Conv2DTest, MatchesMNIST12FirstConvolution) {
   constexpr int kPaddingHeight = 2;
   constexpr int kPaddingWidth = 2;
   constexpr int kBatchSize = 1;
-  constexpr VkMemoryPropertyFlags kHostVisibleMemory =
-      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-
   const std::filesystem::path data_dir =
       std::filesystem::path(VKAI_SOURCE_DIR) / "python/mnist12_cnn/test_data";
   std::vector<float> input;
@@ -137,9 +135,11 @@ TEST(Conv2DTest, MatchesMNIST12FirstConvolution) {
   context.Init();
 
   core::vulkan::VulkanBuffer input_buffer(&context, input.size() * sizeof(float),
-                                          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
+                                          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                          vkai::kHostVisibleMemory);
   core::vulkan::VulkanBuffer output_buffer(&context, reference.size() * sizeof(float),
-                                           VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
+                                           VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                           vkai::kHostVisibleMemory);
   input_buffer.MapData(
       [&input](void* data) { std::memcpy(data, input.data(), input.size() * sizeof(float)); });
 
@@ -165,8 +165,6 @@ TEST(Conv2DTest, MatchesMNIST12FirstConvolution) {
 }
 
 TEST(Conv2DTest, SupportsReflectPadding) {
-  constexpr VkMemoryPropertyFlags kHostVisibleMemory =
-      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
   const std::vector<float> input = {
       1.0F, 2.0F, 3.0F, 4.0F, 5.0F, 6.0F, 7.0F, 8.0F, 9.0F,
   };
@@ -180,9 +178,11 @@ TEST(Conv2DTest, SupportsReflectPadding) {
   context.Init();
 
   core::vulkan::VulkanBuffer input_buffer(&context, input.size() * sizeof(float),
-                                          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
+                                          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                          vkai::kHostVisibleMemory);
   core::vulkan::VulkanBuffer output_buffer(&context, reference.size() * sizeof(float),
-                                           VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
+                                           VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                           vkai::kHostVisibleMemory);
   input_buffer.MapData(
       [&input](void* data) { std::memcpy(data, input.data(), input.size() * sizeof(float)); });
 

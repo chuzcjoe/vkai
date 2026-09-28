@@ -17,14 +17,12 @@
 #include "layers/MaxPool2D.h"
 #include "layers/Relu.h"
 #include "layers/Softmax.h"
+#include "utils/BufferUtils.h"
 #include "utils/Synchronization.h"
 #include "utils/WeightsLoader.h"
 
 namespace vkai {
 namespace {
-
-constexpr VkMemoryPropertyFlags kHostVisibleMemory =
-    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
 int ConvOutputSize(int input, int kernel, int stride, int padding, int dilation) {
   return (input + 2 * padding - dilation * (kernel - 1) - 1) / stride + 1;

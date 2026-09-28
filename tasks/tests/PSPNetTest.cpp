@@ -15,6 +15,7 @@
 #include "VulkanBuffer.h"
 #include "VulkanCommandBuffer.h"
 #include "VulkanContext.h"
+#include "utils/BufferUtils.h"
 
 namespace {
 
@@ -109,15 +110,13 @@ TEST(PSPNetTest, MatchesPyTorchProbabilities) {
   ASSERT_EQ(input.size(), static_cast<size_t>(3 * height * width));
   ASSERT_EQ(expected.size(), static_cast<size_t>(channels * height * width));
 
-  constexpr auto kMemory =
-      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
   core::vulkan::VulkanContext context(false, core::vulkan::QueueFamilyType::Compute,
                                       VK_NULL_HANDLE);
   context.Init();
   core::vulkan::VulkanBuffer input_buffer(&context, input.size() * sizeof(float),
-                                          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kMemory);
+                                          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
   core::vulkan::VulkanBuffer output_buffer(&context, expected.size() * sizeof(float),
-                                           VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kMemory);
+                                           VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
   input_buffer.MapData(
       [&input](void* data) { std::memcpy(data, input.data(), input.size() * sizeof(float)); });
   PSPNetVulkan pspnet(&context, (pspnet_dir / "model/pspnet_weights.bin").string(), height, width,

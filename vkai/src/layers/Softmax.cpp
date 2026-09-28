@@ -4,12 +4,14 @@
 #include <filesystem>
 #include <iostream>
 
+#include "utils/BufferUtils.h"
+
 namespace vkai {
 
 Softmax::Softmax(core::vulkan::VulkanContext* context, int input_size, int batch_size)
     : Layer(context),
       uniform_buffer_(context, sizeof(UniformData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+                      kHostVisibleMemory),
       uniform_data_{.channel_count = input_size,
                     .batch_size = batch_size,
                     .input_height = 1,
@@ -31,7 +33,7 @@ Softmax::Softmax(core::vulkan::VulkanContext* context, int channel_count, int in
                  int input_width, int batch_size, SoftmaxMode mode)
     : Layer(context),
       uniform_buffer_(context, sizeof(UniformData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+                      kHostVisibleMemory),
       uniform_data_{.channel_count = channel_count,
                     .batch_size = batch_size,
                     .input_height = input_height,

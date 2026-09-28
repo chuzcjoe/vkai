@@ -12,6 +12,7 @@
 #include "VulkanCommandBuffer.h"
 #include "VulkanContext.h"
 #include "layers/MaxPool2D.h"
+#include "utils/BufferUtils.h"
 
 namespace {
 
@@ -41,8 +42,6 @@ void ExpectMNIST12PoolMatchesReference(const std::filesystem::path& input_path,
                                        const std::filesystem::path& output_path, int channels,
                                        int input_height, int input_width, int kernel_height,
                                        int kernel_width, int stride_height, int stride_width) {
-  constexpr VkMemoryPropertyFlags kHostVisibleMemory =
-      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
   std::vector<float> input;
   std::vector<float> reference;
   ASSERT_TRUE(ReadFloatBinary(input_path, input));
@@ -57,9 +56,11 @@ void ExpectMNIST12PoolMatchesReference(const std::filesystem::path& input_path,
                                       VK_NULL_HANDLE);
   context.Init();
   core::vulkan::VulkanBuffer input_buffer(&context, input.size() * sizeof(float),
-                                          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
+                                          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                          vkai::kHostVisibleMemory);
   core::vulkan::VulkanBuffer output_buffer(&context, reference.size() * sizeof(float),
-                                           VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kHostVisibleMemory);
+                                           VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                           vkai::kHostVisibleMemory);
   input_buffer.MapData(
       [&input](void* data) { std::memcpy(data, input.data(), input.size() * sizeof(float)); });
 
@@ -97,15 +98,15 @@ void ExpectPaddedMaxPoolMatchesReference(const std::string& name) {
   ASSERT_EQ(input.size(), static_cast<size_t>(batch * channels * input_height * input_width));
   ASSERT_EQ(expected.size(), static_cast<size_t>(batch * channels * output_height * output_width));
 
-  constexpr auto kMemory =
-      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
   core::vulkan::VulkanContext context(false, core::vulkan::QueueFamilyType::Compute,
                                       VK_NULL_HANDLE);
   context.Init();
   core::vulkan::VulkanBuffer input_buffer(&context, input.size() * sizeof(float),
-                                          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kMemory);
+                                          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                          vkai::kHostVisibleMemory);
   core::vulkan::VulkanBuffer output_buffer(&context, expected.size() * sizeof(float),
-                                           VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, kMemory);
+                                           VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                           vkai::kHostVisibleMemory);
   input_buffer.MapData(
       [&input](void* data) { std::memcpy(data, input.data(), input.size() * sizeof(float)); });
   vkai::MaxPool2D max_pool(&context, channels, input_height, input_width, kernel, kernel, stride,

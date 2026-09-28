@@ -10,6 +10,7 @@
 #include "MNISTVulkan.h"
 #include "VulkanCommandBuffer.h"
 #include "VulkanContext.h"
+#include "utils/BufferUtils.h"
 
 namespace {
 
@@ -42,9 +43,6 @@ namespace vkai {
 namespace test {
 
 TEST(MNISTTest, MatchesPyTorchReference) {
-  constexpr VkMemoryPropertyFlags kHostVisibleMemory =
-      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-
   const std::filesystem::path source_dir = VKAI_SOURCE_DIR;
   const std::filesystem::path mnist_dir = source_dir / "python/mnist";
   const std::filesystem::path data_dir = mnist_dir / "test_data";
